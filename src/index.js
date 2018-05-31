@@ -48,9 +48,9 @@ function canMerge (value, isUpdate) {
 }
 
 function merge (source, update) {
-    let result = {};
+    const result = {};
     if (hasScalars(source)) {
-        result = withScalars(getScalars(source));
+        withScalars(result, getScalars(source));
     }
     Object.keys(source).forEach((key) => {
         if (update.hasOwnProperty(key)) {
@@ -58,13 +58,15 @@ function merge (source, update) {
                 return; // don't copy over key
             }
             // don't merge scalar props
-            if (!isScalarProp(source, key)) {
+            if (isScalarProp(source, key)) {
+                result[key] = update[key];
+            } else {
                 // eslint-disable-next-line no-use-before-define
                 result[key] = internalCombineObjects(source[key], update[key]);
-                return;
             }
+        } else {
+            result[key] = source[key];
         }
-        result[key] = source[key];
     });
     // bring in other props from source
     // TODO maybe some way to optimize since, usually there want be any new props
