@@ -2,6 +2,13 @@
 
 import isPlainObject from 'is-plain-object';
 
+function isFunction (value) {
+    return typeof value === 'function';
+}
+function isObject (value) {
+    return (typeof value === 'object') || isFunction(value);
+}
+
 const symbols = {
     replace: Symbol('@@combineObjects/replace'),
     opaque: Symbol('@@combineObjects/opaque'),
@@ -27,9 +34,9 @@ const opaque = (obj) => {
 
 const shouldRemove = (obj, key) => obj[key] === symbols.remove;
 
-const isOpaqueFunction = (obj) => !!obj[symbols.opaqueFunction];
-const isOpaque = (obj) => !!obj[symbols.opaque] || !!obj[symbols.opaqueFunction];
-const hasScalars = (obj) => obj.hasOwnProperty(symbols.scalars);
+const isOpaqueFunction = (obj) => isObject(obj) && !!obj[symbols.opaqueFunction];
+const isOpaque = (obj) => isObject(obj) && (!!obj[symbols.opaque] || !!obj[symbols.opaqueFunction]);
+const hasScalars = (obj) => isObject(obj) && obj.hasOwnProperty(symbols.scalars);
 const getScalars = (obj) => obj[symbols.scalars];
 const isScalarProp = (obj, prop) => hasScalars(obj) && getScalars(obj).indexOf(prop) !== -1;
 
@@ -47,6 +54,18 @@ function canMerge (value, isUpdate) {
     return true;
 }
 
+// this is used in the case where the object needs to be copied without potential for merge, but function transforms could still be here
+// I wonder if I can merge code paths earlier
+function applyFunctionTransformScalar (source, update) {
+    if (isFunction(update)) {
+        return applyFunctionTransformScalar(source, update(source));
+    }
+    if (isOpaqueFunction(update)) {
+        return update.func;
+    }
+    return update;
+}
+
 function merge (source, update) {
     const result = {};
     if (hasScalars(source)) {
@@ -59,7 +78,7 @@ function merge (source, update) {
             }
             // don't merge scalar props
             if (isScalarProp(source, key)) {
-                result[key] = update[key];
+                result[key] = applyFunctionTransformScalar(source[key], update[key]);
             } else {
                 // eslint-disable-next-line no-use-before-define
                 result[key] = internalCombineObjects(source[key], update[key]);
@@ -72,7 +91,7 @@ function merge (source, update) {
     // TODO maybe some way to optimize since, usually there want be any new props
     Object.keys(update).forEach((key) => {
         if (!result.hasOwnProperty(key) && !shouldRemove(update, key)) {
-            result[key] = update[key];
+            result[key] = applyFunctionTransformScalar(undefined, update[key]);
         }
     });
 
@@ -83,6 +102,9 @@ function internalCombineObjects (source, update) {
     if (!canMerge(source, false) || !canMerge(update, true)) {
         if (isOpaqueFunction(update)) {
             return update.func;
+        }
+        if (isFunction(update)) {
+            return internalCombineObjects(source, update(source));
         }
         return update;
     }

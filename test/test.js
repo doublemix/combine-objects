@@ -5,7 +5,7 @@
 var expect = require('chai').expect;
 import combine from '../src/index';
 
-const { opaque, replace, withScalars, remove } = combine;
+const { opaque, replace, withScalars, remove, isObject } = combine;
 
 describe('combineObjects', function () {
     it('should replace scalars with scalars', function () {
@@ -81,4 +81,42 @@ describe('combineObjects', function () {
         const obj = withScalars({ x: 5 }, ["x"]);
         expect(combine(obj, { x: remove() })).to.deep.eql({});
     });
+    it('should support multiple updates through variable arguments', function () {
+        const obj = combine({ x: 4, y: 5, z: 8 }, { x: 6 }, { y: 7 });
+        expect(obj).to.deep.eql({ x: 6, y: 7, z: 8 });
+    });
+    it('should use function transforms', function () {
+        const obj = combine({ x: 5 }, { x: (value) => value + 1 });
+        expect(obj).to.deep.eql({ x: 6 });
+    });
+    it('should recursively apply function transforms', function () {
+        const obj = combine({ x: 5 }, { x: (value) => (value) => value + 1 });
+        expect(obj).to.deep.eql({ x: 6 });
+    });
+    it('should apply function transform on new props', function () {
+        const obj = combine({}, { x: () => 5 });
+        expect(obj).to.deep.eql({ x: 5 });
+    });
+    it('should merge result of function transforms', function () {
+        const obj = combine({ a: 5, b: 6 }, (obj) => ({ sum: obj.a + obj.b }));
+        expect(obj).to.deep.eql({ a: 5, b: 6, sum: 11 });
+    });
+    it('should not merge result of scalar props', function () {
+        const sum = (obj) => ({ sum: obj.a + obj.b });
+        const obj = combine(withScalars({ x: { a: 5, b: 6 } }, ["x"]), { x: sum });
+
+        expect(obj).to.deep.eql({ x: { sum: 11 } });
+    });
+    it('should apply function transforms when the function is opaque', function () {
+        const obj = combine({ x: 5 }, { x: opaque((x) => x + 1 ) });
+        expect(typeof obj.x).to.equal('function');
+
+        const obj2 = combine({}, { x: opaque(() => 5) });
+        expect(typeof obj.x).to.equal('function');
+    });
+    it('should help me', function () {
+        isObject({});
+        isObject(() => {});
+    });
+    // TODO could probably use more test with functions, the relation to everything else is intricate
 });
