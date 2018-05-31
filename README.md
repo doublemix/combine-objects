@@ -1,13 +1,13 @@
-Number Formatter
+Combine Objects
 =========
 
-[![Build Status](https://travis-ci.org/doublemix/aggregate.js.svg?branch=master)](https://travis-ci.org/doublemix/aggregate.js) [![Coverage Status](https://coveralls.io/repos/github/doublemix/aggregate.js/badge.svg?branch=master)](https://coveralls.io/github/doublemix/aggregate.js?branch=master)
+[![Build Status](https://travis-ci.org/doublemix/aggregate.js.svg?branch=master)](https://travis-ci.org/doublemix/combine-objects) [![Coverage Status](https://coveralls.io/repos/github/doublemix/aggregate.js/badge.svg?branch=master)](https://coveralls.io/github/doublemix/combine-objects?branch=master)
 
-Small library for working manipulating lists of data and getting aggregates
+Simple library for combining objects, recursively.
 
 ## Installation
 
-  `npm install @doublemx2/aggregate.js`
+Not on NPM yet
 
 ## Usage
 
@@ -17,6 +17,6 @@ This library is still being setup.
 
   `npm test`
 
-## Contributing
+## Purpose
 
-In lieu of a formal style guide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code.
+This library was inspired by dissatification working with `Object.assign` to combine deeply nested objects.
