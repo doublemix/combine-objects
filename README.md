@@ -1,7 +1,7 @@
 Combine Objects
 =========
 
-[![Build Status](https://travis-ci.org/doublemix/aggregate.js.svg?branch=master)](https://travis-ci.org/doublemix/combine-objects) [![Coverage Status](https://coveralls.io/repos/github/doublemix/aggregate.js/badge.svg?branch=master)](https://coveralls.io/github/doublemix/combine-objects?branch=master)
+[![Build Status](https://travis-ci.org/doublemix/combine-objects.svg?branch=master)](https://travis-ci.org/doublemix/combine-objects) [![Coverage Status](https://coveralls.io/repos/github/doublemix/combine-objects/badge.svg?branch=master)](https://coveralls.io/github/doublemix/combine-objects?branch=master)
 
 Simple library for combining objects, recursively.
 
