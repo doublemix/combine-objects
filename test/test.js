@@ -114,9 +114,5 @@ describe('combineObjects', function () {
         const obj2 = combine({}, { x: opaque(() => 5) });
         expect(typeof obj.x).to.equal('function');
     });
-    it('should help me', function () {
-        isObject({});
-        isObject(() => {});
-    });
     // TODO could probably use more test with functions, the relation to everything else is intricate
 });
