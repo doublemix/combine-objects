@@ -32,7 +32,7 @@ const opaque = (obj) => {
     }
 };
 
-const shouldRemove = (obj, key) => obj[key] === symbols.remove;
+const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
 
 const isOpaqueFunction = (obj) => isObject(obj) && !!obj[symbols.opaqueFunction];
 const isOpaque = (obj) => isObject(obj) && (!!obj[symbols.opaque] || !!obj[symbols.opaqueFunction]);
@@ -40,7 +40,7 @@ const hasScalars = (obj) => isObject(obj) && obj.hasOwnProperty(symbols.scalars)
 const getScalars = (obj) => obj[symbols.scalars];
 const isScalarProp = (obj, prop) => hasScalars(obj) && getScalars(obj).indexOf(prop) !== -1;
 
-function canMerge (value, isUpdate) {
+function canCombine (value, isUpdate) {
     if (!isPlainObject(value)) {
         return false;
     }
@@ -73,62 +73,62 @@ function removeIfNecessary (obj, prop) {
     return obj; // fluency
 }
 
-function merge (source, update) {
+function combineObjects (source, update) {
     const result = {};
     if (hasScalars(source)) {
         withScalars(result, getScalars(source));
     }
-    Object.keys(source).forEach((key) => {
-        if (update.hasOwnProperty(key)) {
+    Object.keys(source).forEach((prop) => {
+        if (update.hasOwnProperty(prop)) {
             // don't merge scalar props
-            if (isScalarProp(source, key)) {
-                result[key] = applyFunctionTransformScalar(source[key], update[key]);
+            if (isScalarProp(source, prop)) {
+                result[prop] = applyFunctionTransformScalar(source[prop], update[prop]);
             } else {
                 // eslint-disable-next-line no-use-before-define
-                result[key] = internalCombineObjects(source[key], update[key]);
+                result[prop] = singleCombine(source[prop], update[prop]);
             }
-            removeIfNecessary(result, key);
+            removeIfNecessary(result, prop);
         } else {
-            result[key] = source[key];
+            result[prop] = source[prop];
         }
     });
     // bring in other props from source
     // TODO maybe some way to optimize since, usually there won't be any new props
-    Object.keys(update).forEach((key) => {
-        if (!result.hasOwnProperty(key)) {
-            result[key] = applyFunctionTransformScalar(undefined, update[key]);
-            removeIfNecessary(result, key);
+    Object.keys(update).forEach((prop) => {
+        if (!result.hasOwnProperty(prop)) {
+            result[prop] = applyFunctionTransformScalar(undefined, update[prop]);
+            removeIfNecessary(result, prop);
         }
     });
 
     return result;
 }
 
-function internalCombineObjects (source, update) {
-    if (!canMerge(source, false) || !canMerge(update, true)) {
+function singleCombine (source, update) {
+    if (!canCombine(source, false) || !canCombine(update, true)) {
         if (isOpaqueFunction(update)) {
             return update.func;
         }
         if (isFunction(update)) {
-            return internalCombineObjects(source, update(source));
+            return singleCombine(source, update(source));
         }
         return update;
     }
-    return merge(source, update);
+    return combineObjects(source, update);
 }
-function combineObjects (source, ...updates) {
+function combine (source, ...updates) {
     return updates.reduce((src, update) => (
-        internalCombineObjects(src, update)
+        singleCombine(src, update)
     ), source);
 }
 
-combineObjects.replace = replace;
-combineObjects.remove = remove;
-combineObjects.withScalars = withScalars;
-combineObjects.opaque = opaque;
-combineObjects.isOpaque = isOpaque;
-combineObjects.hasScalars = hasScalars;
-combineObjects.getScalars = getScalars;
-combineObjects.isScalarProp = isScalarProp;
+combine.replace = replace;
+combine.remove = remove;
+combine.withScalars = withScalars;
+combine.opaque = opaque;
+combine.isOpaque = isOpaque;
+combine.hasScalars = hasScalars;
+combine.getScalars = getScalars;
+combine.isScalarProp = isScalarProp;
 
-export default combineObjects;
+export default combine;
