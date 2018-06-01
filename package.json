@@ -1,13 +1,14 @@
 {
   "name": "@doublemx2/combine-objects",
   "version": "0.1.0",
-  "description": "Small library for combining and updating objects",
-  "main": ".compiled/index.js",
+  "description": "Small library for combining objects",
+  "files": [
+    "dist/**"
+  ],
+  "main": "dist/index.js",
   "scripts": {
     "test": "mocha",
     "cover": "node ./node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha",
-    "compile": "babel src --out-dir .compiled --source-maps",
-    "dev-compile": "babel src --out-dir .compiled --source-maps --watch",
     "prepublish": "npm run build",
     "build": "rollup -c rollup.config.js"
   },
