@@ -6,7 +6,7 @@ function isFunction (value) {
     return typeof value === 'function';
 }
 function isObject (value) {
-    return (typeof value === 'object') || isFunction(value);
+    return (typeof value === 'object') && value !== null || isFunction(value);
 }
 
 const symbols = {
@@ -66,6 +66,13 @@ function applyFunctionTransformScalar (source, update) {
     return update;
 }
 
+function removeIfNecessary (obj, prop) {
+    if (shouldRemove(obj, prop)) {
+        delete obj[prop];
+    }
+    return obj; // fluency
+}
+
 function merge (source, update) {
     const result = {};
     if (hasScalars(source)) {
@@ -73,9 +80,6 @@ function merge (source, update) {
     }
     Object.keys(source).forEach((key) => {
         if (update.hasOwnProperty(key)) {
-            if (shouldRemove(update, key)) {
-                return; // don't copy over key
-            }
             // don't merge scalar props
             if (isScalarProp(source, key)) {
                 result[key] = applyFunctionTransformScalar(source[key], update[key]);
@@ -83,15 +87,17 @@ function merge (source, update) {
                 // eslint-disable-next-line no-use-before-define
                 result[key] = internalCombineObjects(source[key], update[key]);
             }
+            removeIfNecessary(result, key);
         } else {
             result[key] = source[key];
         }
     });
     // bring in other props from source
-    // TODO maybe some way to optimize since, usually there want be any new props
+    // TODO maybe some way to optimize since, usually there won't be any new props
     Object.keys(update).forEach((key) => {
-        if (!result.hasOwnProperty(key) && !shouldRemove(update, key)) {
+        if (!result.hasOwnProperty(key)) {
             result[key] = applyFunctionTransformScalar(undefined, update[key]);
+            removeIfNecessary(result, key);
         }
     });
 

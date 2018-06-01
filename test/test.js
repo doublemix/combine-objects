@@ -114,5 +114,12 @@ describe('combineObjects', function () {
         const obj2 = combine({}, { x: opaque(() => 5) });
         expect(typeof obj.x).to.equal('function');
     });
+    it('should allow function transforms to remove props', function () {
+        const obj1 = combine({ x: 1 }, { x: () => remove() });
+        expect(obj1).to.deep.eql({});
+
+        const obj2 = combine(withScalars({ x: 1 }, ["x"]), { x: () => remove() });
+        expect(obj2).to.deep.eql({});
+    });
     // TODO could probably use more test with functions, the relation to everything else is intricate
 });
