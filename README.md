@@ -217,15 +217,15 @@ It should be noted that functions transform are applied recursively as well. Tha
 - return another function, which will then be called with the same value as the first (this isn't particularly useful (in my experience so far), but is just how the library works
 - more usefully: return a mergable object will be used to update the current value
 
-    combine({
-      x: { a: 7, b: 6 },
-    }, {
-      x: (x) => ({ sum: x.a + x.b }),
-    }) ==== {
-      x: { a: 7, b: 6, sum: 13 },
-    };
+      combine({
+        x: { a: 7, b: 6 },
+      }, {
+        x: (x) => ({ sum: x.a + x.b }),
+      }) ==== {
+        x: { a: 7, b: 6, sum: 13 },
+      };
 
-The transforms can be used to tranform scalar objects/properties, but can should not merge (due to scalars). A transform can also elect to remove a prop
+The transforms can be used to tranform scalar objects/properties, but can should not merge (due to scalars). A transform can also elect to remove a property
 
     combine({
       x: 5,
