@@ -45,7 +45,6 @@ function canCombine (value, isUpdate) {
         return false;
     }
     if (isUpdate && value[symbols.replace]) {
-        delete value[symbols.replace];
         return false;
     }
     if (isOpaque(value)) {

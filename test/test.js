@@ -52,6 +52,8 @@ describe('combineObjects', function () {
         // extra props to show replace
         expect(combine({ x: { y: 6, z: 7 } }, { x: replace({ y: 8 }) }))
             .to.deep.eql({ x: { y: 8 } });
+
+        expect(combine({ x: 6 }, replace({ y: 6 }))).to.deep.eql({ y: 6 });
     });
     it('should replace (not merge) opaque objects', function () {
         // doing multiple combines to show that opaque sticks with the object
