@@ -237,10 +237,10 @@ Additionally, when a function transform is applied while merging objects, the pr
 
     const state = {
       currentId: 'abc',
-      incrementValue: {
+      incrementValues: {
         abc: 5,
         def: 10,
-      }
+      },
       counters: {
         abc: { count: 1 },
         def: { count: 2 },
