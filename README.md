@@ -225,7 +225,7 @@ It should be noted that functions transform are applied recursively as well. Tha
         x: { a: 7, b: 6, sum: 13 },
       };
 
-The transforms can be used to tranform scalar objects/properties, but can should not merge (due to scalars). A transform can also elect to remove a property
+The transforms can be used to tranform scalar objects/properties, but should not merge (due to scalars). A transform can also elect to remove a property
 
     combine({
       x: 5,
@@ -233,7 +233,33 @@ The transforms can be used to tranform scalar objects/properties, but can should
       x: (x) => x === 5 ? remove() : x,
     }) ==== {};
 
-In my experience, the type of objects I use this on don't have functions for props. If you want to store a function through an update you can use the `opaque` function. (Do not use `replace`, the library is not designed for this)
+Additionally, when a function transform is applied while merging objects, the property name will be passed as the second argument to the transformer. This can be occasionally useful if property name was computed, and you need to use it to look up something in another object. The following example is contrived.
+
+    const state = {
+      currentId: 'abc',
+      incrementValue: {
+        abc: 5,
+        def: 10,
+      }
+      counters: {
+        abc: { count: 1 },
+        def: { count: 2 },
+      },
+    };
+    // increment current counter by associated incrementValue
+    const result = combine(state, {
+      counters: {
+        [state.currentId]: (counter, id) => ({
+          count: (it) => it + state.incrementValues[id],
+        }),
+      },
+    });
+    result.counters === {
+      abc: { count: 5 },
+      def: { count: 2 },
+    };
+
+If you want to store a function through an update you can use the `opaque` function. (Do not use `replace`, the library is not designed for this).
 
     const obj = combine({
       x: 5
