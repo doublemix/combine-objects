@@ -10,7 +10,7 @@ const { opaque, replace, withScalars, remove, isObject } = combine;
 describe('combineObjects', function () {
     it('should replace scalars with scalars', function () {
         expect(combine(4, 5)).to.eql(5);
-        expect(combine("string", "other")).to.eql("other");
+        expect(combine('string', 'other')).to.eql('other');
     });
     it('should replace objects with scalars', function () {
         expect(combine({}, 5)).to.eql(5);
@@ -68,7 +68,7 @@ describe('combineObjects', function () {
     });
     it('should replace (not merge) props marked as scalar', function () {
         // doing multiple combines to show that scalars are copied over to new object
-        const obj1 = withScalars({ x: { a: 6 }, y: { a: 7 } }, ["x"]);
+        const obj1 = withScalars({ x: { a: 6 }, y: { a: 7 } }, ['x']);
         const obj2 = combine(obj1, { x: { b: 5}, y: { b: 5 } });
         const obj3 = combine(obj2, { x: { c: 6 } });
 
@@ -80,16 +80,20 @@ describe('combineObjects', function () {
     });
     it('should be able to remove scalar props', function () {
         // just making sure withScalars and remove work together
-        const obj = withScalars({ x: 5 }, ["x"]);
+        const obj = withScalars({ x: 5 }, ['x']);
         expect(combine(obj, { x: remove() })).to.deep.eql({});
     });
     it('should support multiple updates through variable arguments', function () {
         const obj = combine({ x: 4, y: 5, z: 8 }, { x: 6 }, { y: 7 });
         expect(obj).to.deep.eql({ x: 6, y: 7, z: 8 });
     });
-    it('should use function transforms', function () {
+    it('should use function transforms while combining objects', function () {
         const obj = combine({ x: 5 }, { x: (value) => value + 1 });
         expect(obj).to.deep.eql({ x: 6 });
+    });
+    it('should use function transforms at the top level', function () {
+        const obj = combine(1, (it) => it + 1);
+        expect(obj).to.deep.eql(2);
     });
     it('should recursively apply function transforms', function () {
         const obj = combine({ x: 5 }, { x: (value) => (value) => value + 1 });
@@ -105,7 +109,7 @@ describe('combineObjects', function () {
     });
     it('should not merge result of scalar props', function () {
         const sum = (obj) => ({ sum: obj.a + obj.b });
-        const obj = combine(withScalars({ x: { a: 5, b: 6 } }, ["x"]), { x: sum });
+        const obj = combine(withScalars({ x: { a: 5, b: 6 } }, ['x']), { x: sum });
 
         expect(obj).to.deep.eql({ x: { sum: 11 } });
     });
@@ -120,8 +124,21 @@ describe('combineObjects', function () {
         const obj1 = combine({ x: 1 }, { x: () => remove() });
         expect(obj1).to.deep.eql({});
 
-        const obj2 = combine(withScalars({ x: 1 }, ["x"]), { x: () => remove() });
+        const obj2 = combine(withScalars({ x: 1 }, ['x']), { x: () => remove() });
         expect(obj2).to.deep.eql({});
+    });
+    it('should allow the use of the key of the prop being transformed in the transform', function () {
+        expect(combine({ x: 't' }, { x: (it, key) => it + key})).to.deep.equal({
+            x: 'tx',
+        });
+    });
+    it('should pass undefined as the value of a transform with no preceding value', function () {
+        expect(combine({}, { x: (it) => typeof it })).to.deep.equal({
+            x: 'undefined',
+        });
+    });
+    it('should pass undefined as the value of a transform where is the no key (top level)', function () {
+        expect(combine(1, (it, key) => typeof key)).to.eql('undefined');
     });
     // TODO could probably use more test with functions, the relation to everything else is intricate
 });

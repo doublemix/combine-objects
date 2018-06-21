@@ -40,6 +40,38 @@ const hasScalars = (obj) => isObject(obj) && obj.hasOwnProperty(symbols.scalars)
 const getScalars = (obj) => obj[symbols.scalars];
 const isScalarProp = (obj, prop) => hasScalars(obj) && getScalars(obj).indexOf(prop) !== -1;
 
+function removeIfNecessary (obj, prop) {
+    if (shouldRemove(obj, prop)) {
+        delete obj[prop];
+    }
+    return obj; // fluency
+}
+
+function combineObjects (source, update) {
+    const result = {};
+    if (hasScalars(source)) {
+        withScalars(result, getScalars(source));
+    }
+    [
+        ...Object.keys(source),
+        ...Object.keys(update),
+    ].forEach((prop) => {
+        if (result.hasOwnProperty(prop)) {
+            return; // already processed
+        }
+        if (update.hasOwnProperty(prop)) {
+            // I have to ignore this with my implementation
+            // eslint-disable-next-line no-use-before-define
+            result[prop] = internalCombine(source[prop], update[prop], prop, isScalarProp(source, prop));
+            removeIfNecessary(result, prop);
+        } else {
+            result[prop] = source[prop];
+        }
+    });
+
+    return result;
+}
+
 function canCombine (value, isUpdate) {
     if (!isPlainObject(value)) {
         return false;
@@ -53,71 +85,28 @@ function canCombine (value, isUpdate) {
     return true;
 }
 
-// this is used in the case where the object needs to be copied without potential for merge, but function transforms could still be here
-// I wonder if I can merge code paths earlier
-function applyFunctionTransformScalar (source, update) {
-    if (isFunction(update)) {
-        return applyFunctionTransformScalar(source, update(source));
-    }
-    if (isOpaqueFunction(update)) {
-        return update.func;
-    }
-    return update;
+function shouldReplace (source, update) {
+    return (!canCombine(source, false) || !canCombine(update, true));
 }
 
-function removeIfNecessary (obj, prop) {
-    if (shouldRemove(obj, prop)) {
-        delete obj[prop];
-    }
-    return obj; // fluency
-}
-
-function combineObjects (source, update) {
-    const result = {};
-    if (hasScalars(source)) {
-        withScalars(result, getScalars(source));
-    }
-    Object.keys(source).forEach((prop) => {
-        if (update.hasOwnProperty(prop)) {
-            // don't merge scalar props
-            if (isScalarProp(source, prop)) {
-                result[prop] = applyFunctionTransformScalar(source[prop], update[prop]);
-            } else {
-                // eslint-disable-next-line no-use-before-define
-                result[prop] = singleCombine(source[prop], update[prop]);
-            }
-            removeIfNecessary(result, prop);
-        } else {
-            result[prop] = source[prop];
-        }
-    });
-    // bring in other props from source
-    // TODO maybe some way to optimize since, usually there won't be any new props
-    Object.keys(update).forEach((prop) => {
-        if (!result.hasOwnProperty(prop)) {
-            result[prop] = applyFunctionTransformScalar(undefined, update[prop]);
-            removeIfNecessary(result, prop);
-        }
-    });
-
-    return result;
-}
-
-function singleCombine (source, update) {
-    if (!canCombine(source, false) || !canCombine(update, true)) {
+function internalCombine (source, update, key = undefined, isScalarField = false) {
+    if (shouldReplace(source, update)) {
         if (isOpaqueFunction(update)) {
             return update.func;
         }
         if (isFunction(update)) {
-            return singleCombine(source, update(source));
+            return internalCombine(source, update(source, key), key, isScalarField);
         }
+        return update;
+    }
+    if (isScalarField) {
         return update;
     }
     return combineObjects(source, update);
 }
 function combine (source, ...updates) {
     return updates.reduce((src, update) => (
-        singleCombine(src, update)
+        internalCombine(src, update)
     ), source);
 }
 
