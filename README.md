@@ -255,7 +255,7 @@ Additionally, when a function transform is applied while merging objects, the pr
       },
     });
     result.counters === {
-      abc: { count: 5 },
+      abc: { count: 6 },
       def: { count: 2 },
     };
 
