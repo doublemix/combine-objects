@@ -270,7 +270,7 @@ If you want to store a function through an update you can use the `opaque` funct
 
 ### Notes
 
-The `replace`, `opaque`, `withScalars`, and `remove` functions all use internal Symbols which are not exported.
+The `replace`, `opaque`, `withScalars`, and `remove` functions all use non-enumerable properties. They are still writable and configurable.
 
 The `replace`, `opaque`, and `withScalars` all mutate their input, and return the same object (for fluency). The majority of use cases for these functions are with newly created objects, usually through literals, so it can just be thought of as part of the construction process.
 
