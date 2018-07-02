@@ -10,24 +10,34 @@ function isObject (value) {
 }
 
 const symbols = {
-    replace: Symbol('@@combineObjects/replace'),
-    opaque: Symbol('@@combineObjects/opaque'),
-    opaqueFunction: Symbol('@@combineObjects/opaqueFunction'),
-    remove: Symbol('@@combineObjects/remove'),
-    scalars: Symbol('@@combineObjects/scalars'),
+    replace: '@@combineObjects/replace',
+    opaque: '@@combineObjects/opaque',
+    opaqueFunction: '@@combineObjects/opaqueFunction',
+    remove: { remove: '@@combineObjects/remove' }, // this one is an object to test against, since it's not used as a key
+    scalars: '@@combineObjects/scalars',
 };
 
-const replace = (obj) => { obj[symbols.replace] = true; return obj; };
+function setSymbolLikeProperty (obj, property, value) {
+    Object.defineProperty(obj, property, {
+        value,
+        writable: true,
+        enumerable: false,
+        configurable: true,
+    });
+}
+
+const replace = (obj) => { setSymbolLikeProperty(obj, symbols.replace, true); return obj; };
 const remove = () => symbols.remove;
-const withScalars = (obj, scalars) => { obj[symbols.scalars] = scalars; return obj; };
+const withScalars = (obj, scalars) => { setSymbolLikeProperty(obj, symbols.scalars, scalars); return obj; };
 const opaque = (obj) => {
     if (obj instanceof Function) {
-        return {
+        const result = {
             func: obj,
-            [symbols.opaqueFunction]: true,
         };
+        setSymbolLikeProperty(result, symbols.opaqueFunction, true);
+        return result;
     } else {
-        obj[symbols.opaque] = true;
+        setSymbolLikeProperty(obj, symbols.opaque, true);
         return obj;
     }
 };
