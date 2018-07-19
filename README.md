@@ -281,3 +281,8 @@ The `replace`, `opaque`, and `withScalars` all mutate their input, and return th
 ## Coverage
 
     npm run cover
+
+### Changes
+
+- v0.2.4
+  - Fixed Bug where function transforms did not work if they were placed deeper in the update than the source.

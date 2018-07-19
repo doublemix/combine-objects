@@ -2,6 +2,8 @@
 
 import isPlainObject from 'is-plain-object';
 
+const EMPTY = {};
+
 function isFunction (value) {
     return typeof value === 'function';
 }
@@ -106,6 +108,12 @@ function internalCombine (source, update, key = undefined, isScalarField = false
         }
         if (isFunction(update)) {
             return internalCombine(source, update(source, key), key, isScalarField);
+        }
+        if (isOpaque(update) || update === symbols.remove) {
+            return update;
+        }
+        if (isPlainObject(update)) {
+            return combineObjects(EMPTY, update); // allows nested function transforms to happen
         }
         return update;
     }

@@ -140,5 +140,42 @@ describe('combineObjects', function () {
     it('should pass undefined as the value of a transform where is the no key (top level)', function () {
         expect(combine(1, (it, key) => typeof key)).to.eql('undefined');
     });
+    it('should allow function transforms to work at deep levels, even if the source is shallow', function () {
+        expect(combine({ x: 0 }, {
+            x: {
+                y: {
+                    z: (it) => 5,
+                },
+            },
+        })).to.deep.equal({
+            x: {
+                y: {
+                    z: 5,
+                },
+            },
+        })
+    });
+    it('should allow function transforms to work at deep levels, even if the source is undefined/scalar', function () {
+        expect(combine(undefined, {
+            x: {
+                y: {
+                    z: (it) => 5,
+                },
+            },
+        })).to.deep.equal({
+            x: {
+                y: {
+                    z: 5,
+                },
+            },
+        });
+    });
+    it('should pass undefined to function transforms, when they occur at levels deeper than the source', function () {
+        expect(combine(undefined, {
+            x: (it) => it,
+        })).to.deep.equal({
+            x: undefined,
+        });
+    });
     // TODO could probably use more test with functions, the relation to everything else is intricate
 });
