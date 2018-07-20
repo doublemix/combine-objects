@@ -14,7 +14,7 @@
     "test": "mocha",
     "cover": "node ./node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha",
     "compile": "babel src --out-dir .compiled --source-maps",
-    "prepublish": "npm run build",
+    "prepare": "npm run build",
     "build": "rollup -c rollup.config.js"
   },
   "author": "Mitchel Myers <doublemx2@gmail.com>",
