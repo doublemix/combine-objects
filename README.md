@@ -269,6 +269,30 @@ To store a function through an update you can use the `replace` function. (Previ
     });
     obj.x === f;
 
+#### Ignoring a update (or using the source)
+
+The `ignore` function can be used to instruct the `combine` function to use the source as the result without any merging (i.e. *ignore* the update). This maintains referential integrity.
+
+    combine({ x: 5 }, ignore()) ==== { x: 5 }
+    combine({ x: { y: 6 } }, { x: ignore() }) ==== { x: { y: 6 } };
+
+    // Referential Integrity
+    const obj = {};
+    combine(obj, ignore()) === obj; // strict equals
+    combine({ x: obj }, { x: ignore() }).x === obj; // strict equals
+
+This isn't particulary useful by itself, but can be useful if the update is constructed conditionally, or returned conditionally from a function transform. It can be used to disallow (ignore an update) if an invalid state is detected:
+
+    const increment = (it) => it + 1;
+    const incrementIfEditing = (it) => it.editing ? { x: increment } : ignore();
+
+    combine({ editing: true, x: 5 }, incrementIfEditing).x === 6;
+    combine({ editing: false, x: 5 }, incrementIfEditing).x === 5; // did not increment
+
+The alternative to `ignore` would be to return the object. Since `ignore` maintains referential integrity it doesn't trigger merge semantics (which may be redundant, or even destructive if the source has functions in it).
+
+Note: It is essentially a shortcut for calling `replace` with the source.
+
 ### Notes
 
 The `opaque` and `withScalars` functions set non-enumerable properties on the input (mutating). Those properties are still writable and configurable. They need to mutate the object because they effect the way it behaves with this library. Usually these are newly constructed objects (e.g. `opaque({ x: 5 })`), so it can be thought of as part of the construction process. These function return their modified input object (for fluency).
@@ -285,6 +309,8 @@ Another note about `opaque`, if it is called on a non-plain object, it will defe
 
 ### Changes
 
+- v0.3.0
+  - Addition of the `ignore` function.
 - v0.2.5
   - Fixed bug where `replace` only worked with objects, it can now be used on anything (which can be useful when the input type is unknown)
   - Deprecated use of `opaque` to store functions. Use `replace`.

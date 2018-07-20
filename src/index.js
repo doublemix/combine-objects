@@ -18,10 +18,12 @@ class Replace {
 }
 
 class Remove {}
+class Ignore {}
 
 const symbols = {
     opaque: '@@combineObjects/opaque',
     remove: new Remove(),
+    ignore: new Ignore(),
     scalars: '@@combineObjects/scalars',
 };
 
@@ -36,6 +38,7 @@ function setSymbolLikeProperty (obj, property, value) {
 
 const replace = (obj) => new Replace(obj);
 const remove = () => symbols.remove;
+const ignore = () => symbols.ignore;
 const withScalars = (obj, scalars) => { setSymbolLikeProperty(obj, symbols.scalars, scalars); return obj; };
 const opaque = (obj) => {
     if (!isPlainObject(obj)) {
@@ -50,6 +53,7 @@ const opaque = (obj) => {
 const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
 
 const isReplace = (obj) => obj instanceof Replace;
+const isIgnore = (obj) => obj instanceof Ignore;
 const isOpaque = (obj) => isObject(obj) && !!obj[symbols.opaque];
 const hasScalars = (obj) => isObject(obj) && obj.hasOwnProperty(symbols.scalars);
 const getScalars = (obj) => obj[symbols.scalars];
@@ -87,35 +91,28 @@ function combineObjects (source, update) {
     return result;
 }
 
-function canCombine (value, isUpdate) {
-    if (!isPlainObject(value)) {
-        return false;
-    }
-    if (isUpdate && isReplace(value)) {
-        return false;
-    }
-    if (isOpaque(value)) {
-        return false;
-    }
-    return true;
-}
-
 function shouldReplace (source, update) {
-    return (!canCombine(source, false) || !canCombine(update, true));
+    return (
+        !isPlainObject(source) ||
+        !isPlainObject(update) ||
+        isOpaque(source)
+    );
 }
 
 function internalCombine (source, update, key = undefined, isScalarField = false) {
+    if (isFunction(update)) {
+        return internalCombine(source, update(source, key), key, isScalarField);
+    }
+    if (isOpaque(update)) {
+        return update;
+    }
+    if (isReplace(update)) {
+        return update.value;
+    }
+    if (isIgnore(update)) {
+        return source;
+    }
     if (shouldReplace(source, update)) {
-        // function transforms
-        if (isFunction(update)) {
-            return internalCombine(source, update(source, key), key, isScalarField);
-        }
-        if (isOpaque(update)) {
-            return update;
-        }
-        if (isReplace(update)) {
-            return update.value;
-        }
         if (isPlainObject(update)) {
             return combineObjects(EMPTY, update); // allows nested function transforms to happen
         }
@@ -134,6 +131,7 @@ function combine (source, ...updates) {
 
 combine.replace = replace;
 combine.remove = remove;
+combine.ignore = ignore;
 combine.withScalars = withScalars;
 combine.opaque = opaque;
 combine.isOpaque = isOpaque;

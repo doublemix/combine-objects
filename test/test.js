@@ -5,7 +5,7 @@
 var expect = require('chai').expect;
 import combine from '../src/index';
 
-const { opaque, replace, withScalars, remove, isObject } = combine;
+const { opaque, replace, withScalars, remove, ignore } = combine;
 
 describe('combineObjects', function () {
     it('should replace scalars with scalars', function () {
@@ -185,6 +185,22 @@ describe('combineObjects', function () {
         })).to.deep.equal({
             x: undefined,
         });
+    });
+    it('should use the source value when the update value is ignore()', function () {
+        expect(combine({ x: 5 }, ignore())).to.deep.eql({ x: 5 });
+        expect(combine({ x: 5, y: 6, z: 7 }, { x: ignore(), y: 8 })).to.deep.eql({ x: 5, y: 8, z: 7 });
+    });
+    it('should maintain referential integrity when using ignore()', function () {
+        const obj = {};
+        expect(combine(obj, ignore())).to.equal(obj);
+        expect(combine({ x: obj }, { x: ignore() }).x).to.equal(obj);
+    });
+    it('should allow function transforms to elect to use the source value by calling ignore()' , function () {
+        const transform = (it) => it.x > 7 ? ignore() : { x: (it) => it + 1 };
+        expect(combine({ x: 3 }, transform)).to.deep.eql({ x: 4 });
+        expect(combine({ x: 8 }, transform)).to.deep.eql({ x: 8 });
+        const obj = { x: 8 };
+        expect(combine(obj, transform)).to.equal(obj);
     });
     // TODO could probably use more test with functions, the relation to everything else is intricate
 });
