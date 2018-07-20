@@ -11,11 +11,17 @@ function isObject (value) {
     return (typeof value === 'object') && value !== null || isFunction(value);
 }
 
+class Replace {
+    constructor (value) {
+        this.value = value;
+    }
+}
+
+class Remove {}
+
 const symbols = {
-    replace: '@@combineObjects/replace',
     opaque: '@@combineObjects/opaque',
-    opaqueFunction: '@@combineObjects/opaqueFunction',
-    remove: { remove: '@@combineObjects/remove' }, // this one is an object to test against, since it's not used as a key
+    remove: new Remove(),
     scalars: '@@combineObjects/scalars',
 };
 
@@ -28,26 +34,23 @@ function setSymbolLikeProperty (obj, property, value) {
     });
 }
 
-const replace = (obj) => { setSymbolLikeProperty(obj, symbols.replace, true); return obj; };
+const replace = (obj) => new Replace(obj);
 const remove = () => symbols.remove;
 const withScalars = (obj, scalars) => { setSymbolLikeProperty(obj, symbols.scalars, scalars); return obj; };
 const opaque = (obj) => {
-    if (obj instanceof Function) {
-        const result = {
-            func: obj,
-        };
-        setSymbolLikeProperty(result, symbols.opaqueFunction, true);
-        return result;
-    } else {
-        setSymbolLikeProperty(obj, symbols.opaque, true);
-        return obj;
+    if (!isPlainObject(obj)) {
+        // should warn here
+        // defers to replace, so no combining happens (generally what opaque does)
+        return replace(obj);
     }
+    setSymbolLikeProperty(obj, symbols.opaque, true);
+    return obj;
 };
 
 const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
 
-const isOpaqueFunction = (obj) => isObject(obj) && !!obj[symbols.opaqueFunction];
-const isOpaque = (obj) => isObject(obj) && (!!obj[symbols.opaque] || !!obj[symbols.opaqueFunction]);
+const isReplace = (obj) => obj instanceof Replace;
+const isOpaque = (obj) => isObject(obj) && !!obj[symbols.opaque];
 const hasScalars = (obj) => isObject(obj) && obj.hasOwnProperty(symbols.scalars);
 const getScalars = (obj) => obj[symbols.scalars];
 const isScalarProp = (obj, prop) => hasScalars(obj) && getScalars(obj).indexOf(prop) !== -1;
@@ -88,7 +91,7 @@ function canCombine (value, isUpdate) {
     if (!isPlainObject(value)) {
         return false;
     }
-    if (isUpdate && value[symbols.replace]) {
+    if (isUpdate && isReplace(value)) {
         return false;
     }
     if (isOpaque(value)) {
@@ -103,14 +106,15 @@ function shouldReplace (source, update) {
 
 function internalCombine (source, update, key = undefined, isScalarField = false) {
     if (shouldReplace(source, update)) {
-        if (isOpaqueFunction(update)) {
-            return update.func;
-        }
+        // function transforms
         if (isFunction(update)) {
             return internalCombine(source, update(source, key), key, isScalarField);
         }
-        if (isOpaque(update) || update === symbols.remove) {
+        if (isOpaque(update)) {
             return update;
+        }
+        if (isReplace(update)) {
+            return update.value;
         }
         if (isPlainObject(update)) {
             return combineObjects(EMPTY, update); // allows nested function transforms to happen

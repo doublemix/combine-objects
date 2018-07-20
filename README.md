@@ -63,7 +63,7 @@ To add a new a property:
 
     combine({ x: 5 }, {y : 6 }) ==== { x: 5, y: 6 }
 
-To add merge deeply nested properties:
+To merge deeply nested properties:
 
     combine({
       deeply: {
@@ -103,9 +103,9 @@ To do multiple updates at once (uses variable args):
       z: 7
     }
 
-### Alternatives to merging objects
+### Opting out of merge
 
-The default behavior when the `source` and `update` are both plain objects is to merge the objects.  However, sometimes you want to replace, rather than merge an object. There, are three mechanisms for this provided by the library. They all allow this to be accomplished but have slightly different semantics. They are all available as functions on the default export of the library. (Symbols are used internally, so they shouldn't mess with property iteration, correct me where I'm wrong).
+The default behavior when the `source` and `update` are both plain objects is to merge the objects.  However, sometimes it is necessary to replace (rather than merge) an object. There are three mechanisms for doing this provided by the library. They all allow this to be accomplished but have slightly different semantics. They are all available as functions on the default export of the library. (Non-enumerable properties are used (see notes below)).
 
 #### Replace
 
@@ -157,7 +157,7 @@ Opaqueness sticks with objects, unlike the effect of replace, so it cannot be me
       { z: 7 },
     ) ==== { z: 7 }
 
-(Note that there is an additional Symbol property on each of the opaque objects, but the deep equal provided by mocha expectations does not consider this as inequal (convenient for tests) (possibly because it's not iterable))
+(Note that there is an additional non-enumerable property on each of the opaque objects, but the deep equal provided by mocha expectations does not consider this as inequal (convenient for tests) (possibly because it's not iterable))
 
 #### With scalars
 
@@ -176,11 +176,11 @@ The `withScalars` function identifies a list of properties on an object which sh
       z: { y: 7, b: 9 } // merged
     }
 
-This, like opaque, uses a Symbol property on the object.
+This, like `opaque`, uses a non-enumerable property on the object.
 
 ### Removing properties
 
-With the default behavior, you can replace and add properties, but you cannot remove props. The `remove` function, available on the default export allows you to remove properties.
+With the default behavior, you can replace and add properties, but you cannot remove props. The `remove` function, available on the default export allows the removal of properties.
 
     const remove = combine.remove
 
@@ -195,7 +195,7 @@ With the default behavior, you can replace and add properties, but you cannot re
 
 ### Transforms
 
-By default, when a function is supplied as the value in an update, it is used to transform the current value to the new value. The function receives, as it only parameter, the current value. It will receive undefined if the property does not exist. It should return the new value.
+By default, when a function is supplied as the value in an update, it is used to transform the current value to the new value. The function receives, as it only parameter, the current value. It will receive `undefined` if the property does not exist. It should return the new value.
 
     const add1 = (x) => x + 1;
     combine({
@@ -210,11 +210,11 @@ By default, when a function is supplied as the value in an update, it is used to
 
     combine(obj, { anArray: (arr) => [...arr, newElement] })
 
-It's your responsibility to maintain immutability (if you want to)
+It's the user's responsibility to maintain immutability with function transforms (if desired)
 
-It should be noted that functions transform are applied recursively as well. That means you can...
+It should be noted that functions transform are applied recursively as well. That means the library can:
 
-- return another function, which will then be called with the same value as the first (this isn't particularly useful (in my experience so far), but is just how the library works
+- return another function, which will then be called with the same value as the first (this isn't particularly useful (in my experience so far), but is just how the library works)
 - more usefully: return a mergable object will be used to update the current value
 
       combine({
@@ -259,20 +259,21 @@ Additionally, when a function transform is applied while merging objects, the pr
       def: { count: 2 },
     };
 
-If you want to store a function through an update you can use the `opaque` function. (Do not use `replace`, the library is not designed for this).
+To store a function through an update you can use the `replace` function. (Previously, `opaque` was used for this; that is now deprecated).
 
+    function f () {}
     const obj = combine({
       x: 5
     }, {
-      x: opaque(() => {}),
+      x: replace(() => {}),
     });
-    typeof obj.x === "function"
+    obj.x === f;
 
 ### Notes
 
-The `replace`, `opaque`, `withScalars`, and `remove` functions all use non-enumerable properties. They are still writable and configurable.
+The `opaque` and `withScalars` functions set non-enumerable properties on the input (mutating). Those properties are still writable and configurable. They need to mutate the object because they effect the way it behaves with this library. Usually these are newly constructed objects (e.g. `opaque({ x: 5 })`), so it can be thought of as part of the construction process. These function return their modified input object (for fluency).
 
-The `replace`, `opaque`, and `withScalars` all mutate their input, and return the same object (for fluency). The majority of use cases for these functions are with newly created objects, usually through literals, so it can just be thought of as part of the construction process.
+Another note about `opaque`, if it is called on a non-plain object, it will defer to `replace`. This is because `opaque` used to be what was used to store a function (rather than applying it as a transform). This use case is now deprecated and `replace` should be used on functions.
 
 ## Tests
 
@@ -284,5 +285,8 @@ The `replace`, `opaque`, and `withScalars` all mutate their input, and return th
 
 ### Changes
 
+- v0.2.5
+  - Fixed bug where `replace` only worked with objects, it can now be used on anything (which can be useful when the input type is unknown)
+  - Deprecated use of `opaque` to store functions. Use `replace`.
 - v0.2.4
-  - Fixed Bug where function transforms did not work if they were placed deeper in the update than the source.
+  - Fixed bug where function transforms did not work if they were placed deeper in the update than the source.

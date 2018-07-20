@@ -55,6 +55,12 @@ describe('combineObjects', function () {
 
         expect(combine({ x: 6 }, replace({ y: 6 }))).to.deep.eql({ y: 6 });
     });
+    it('should replace scalars passed through replace(...)', function () {
+        expect(combine({ x: 8 }, replace(null))).to.eql(null);
+    });
+    it('should replace opaque objects passed through replace(...)', function () {
+        expect(combine({ x: 8 }, replace(opaque({ x: 9 })))).to.deep.eql({ x: 9 });
+    })
     it('should replace (not merge) opaque objects', function () {
         // doing multiple combines to show that opaque sticks with the object
         const obj1 = { x: 5 };
@@ -74,6 +80,12 @@ describe('combineObjects', function () {
 
         expect(obj2).to.deep.eql({ x: { b: 5}, y: { a: 7, b: 5 }});
         expect(obj3.x).to.deep.eql({ c: 6 });
+    });
+    it('should replace when opaque is called on non-plain objects', function () {
+        // the only case where this is different than normal behavior is with functions
+        // this should be considered deprecated behavior (use replace instead)
+        function f (it) { return it + 1; }
+        expect(combine({ x: 5 }, { x: opaque(f) })).to.deep.eql({ x: f });
     });
     it('should be able to remove props', function () {
         expect(combine({ x: 5, y: 6 }, { x: remove() })).to.deep.eql({ y: 6 });
@@ -113,12 +125,9 @@ describe('combineObjects', function () {
 
         expect(obj).to.deep.eql({ x: { sum: 11 } });
     });
-    it('should apply function transforms when the function is opaque', function () {
-        const obj = combine({ x: 5 }, { x: opaque((x) => x + 1 ) });
-        expect(typeof obj.x).to.equal('function');
-
-        const obj2 = combine({}, { x: opaque(() => 5) });
-        expect(typeof obj.x).to.equal('function');
+    it('should not apply function transforms when the function is passed through replace(...)', function () {
+        function f (it) { return it + 1; }
+        expect(combine({ x: 8 }, { x: replace(f) })).to.deep.eql({ x: f });
     });
     it('should allow function transforms to remove props', function () {
         const obj1 = combine({ x: 1 }, { x: () => remove() });
