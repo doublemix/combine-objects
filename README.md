@@ -13,7 +13,7 @@ npm install --save @doublemx2/combine-objects
 
 ## Purpose
 
-This library was inspired by dissatification working with `Object.assign` to combine deeply nested objects.
+This library was designed to simplify working with `Object.assign` to update parts of deeply nested objects, immutably.
 
 The goal is to simplify code like this:
 
