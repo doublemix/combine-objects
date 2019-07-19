@@ -123,9 +123,13 @@ function internalCombine (source, update, key = undefined, isScalarField = false
     }
     return combineObjects(source, update);
 }
+function internalCombine2 (source, update) {
+    const result = internalCombine(source, update);
+    return result === symbols.remove ? undefined : result;
+}
 function combine (source, ...updates) {
     return updates.reduce((src, update) => (
-        internalCombine(src, update)
+        internalCombine2(src, update)
     ), source);
 }
 

@@ -90,6 +90,9 @@ describe('combineObjects', function () {
     it('should be able to remove props', function () {
         expect(combine({ x: 5, y: 6 }, { x: remove() })).to.deep.eql({ y: 6 });
     });
+    it('should return undefined when removing at the top-level', function () {
+        expect(combine({}, remove())).to.eql(undefined)
+    })
     it('should be able to remove scalar props', function () {
         // just making sure withScalars and remove work together
         const obj = withScalars({ x: 5 }, ['x']);
