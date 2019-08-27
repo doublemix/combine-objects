@@ -72,7 +72,7 @@ describe('combineObjects', function () {
         expect(obj3).to.deep.eql({ z: 7 });
         expect(obj4).to.deep.eql({ z: 7, a: 8 });
     });
-    it('should replace (not merge) props marked as scalar', function () {
+    it('should replace (not merge) props marked as scalar (deprecated feature)', function () {
         // doing multiple combines to show that scalars are copied over to new object
         const obj1 = withScalars({ x: { a: 6 }, y: { a: 7 } }, ['x']);
         const obj2 = combine(obj1, { x: { b: 5}, y: { b: 5 } });
@@ -81,7 +81,7 @@ describe('combineObjects', function () {
         expect(obj2).to.deep.eql({ x: { b: 5}, y: { a: 7, b: 5 }});
         expect(obj3.x).to.deep.eql({ c: 6 });
     });
-    it('should replace when opaque is called on non-plain objects', function () {
+    it('should replace when opaque is called on non-plain objects (deprecated use)', function () {
         // the only case where this is different than normal behavior is with functions
         // this should be considered deprecated behavior (use replace instead)
         function f (it) { return it + 1; }

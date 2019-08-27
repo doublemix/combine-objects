@@ -2,12 +2,14 @@
 
 import isPlainObject from 'is-plain-object';
 
+import { withScalarsDeprecationWarning, opaqueFunctionDeprecationWarning } from './warnings';
+
 const EMPTY = {};
 
 function isFunction (value) {
     return typeof value === 'function';
 }
-function isObject (value) {
+function isObject(value) {
     return (typeof value === 'object') && value !== null || isFunction(value);
 }
 
@@ -42,8 +44,7 @@ const ignore = () => symbols.ignore;
 const withScalars = (obj, scalars) => { setSymbolLikeProperty(obj, symbols.scalars, scalars); return obj; };
 const opaque = (obj) => {
     if (!isPlainObject(obj)) {
-        // should warn here
-        // defers to replace, so no combining happens (generally what opaque does)
+        opaqueFunctionDeprecationWarning();
         return replace(obj);
     }
     setSymbolLikeProperty(obj, symbols.opaque, true);
@@ -69,6 +70,7 @@ function removeIfNecessary (obj, prop) {
 function combineObjects (source, update) {
     const result = {};
     if (hasScalars(source)) {
+        withScalarsDeprecationWarning();
         withScalars(result, getScalars(source));
     }
     [
@@ -79,7 +81,7 @@ function combineObjects (source, update) {
             return; // already processed
         }
         if (update.hasOwnProperty(prop)) {
-            // I have to ignore this with my implementation
+            // mutually recursive functions
             // eslint-disable-next-line no-use-before-define
             result[prop] = internalCombine(source[prop], update[prop], prop, isScalarProp(source, prop));
             removeIfNecessary(result, prop);
