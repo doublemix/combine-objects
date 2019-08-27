@@ -3,9 +3,9 @@
   "version": "0.3.1",
   "description": "Small library for combining objects",
   "files": [
-    "dist/**"
+    "/dist/**"
   ],
-  "main": "dist/index.js",
+  "main": "/dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/doublemix/combine-objects.git"
