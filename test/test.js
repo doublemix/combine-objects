@@ -205,4 +205,9 @@ describe('combineObjects', () => {
     expect(combine(obj, transform)).to.equal(obj);
   });
   // TODO could probably use more test with functions, the relation to everything else is intricate
+  it('should return source when no updates are passed', () => {
+    const obj = {};
+    expect(combine(obj)).to.equal(obj);
+    expect(combine(5)).to.equal(5);
+  });
 });
