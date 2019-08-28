@@ -16,8 +16,7 @@
     "build:rollup": "rm -rf ./dist && rollup -c rollup.config.js",
     "build": "npm run build:rollup",
     "test": "mocha",
-    "cover": "nyc mocha",
-    "prepublishOnly": "npm run cover && npm run build"
+    "cover": "nyc mocha"
   },
   "author": "Mitchel Myers <doublemx2@gmail.com>",
   "license": "ISC",

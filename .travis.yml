@@ -1,13 +1,14 @@
 language: node_js
-
 node_js:
-  - stable
-
-install:
-  - npm install
-
-script:
-  - npm run cover
-
-# Send coverage data to Coveralls
-after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
+- node
+before_deploy:
+- npm run build
+deploy:
+  skip_cleanup: true
+  provider: npm
+  email: doublemx2@gmail.com
+  api_key:
+    secure: M0WY8HXIJ0OZuMxVilrTYlNmbCt14mdLMrMxzFK7mADtlEz2znCDMItbPFG5zMHukHFyYipLFtzjQI9BULpYV0y+EM7ajjjVWoCtA63hpuYS2dyLJD/aQtBBiO+/0Y9OfEhedpMWmN+/McN5Nt1RvriNFHadSNmuyG1kgaYm0OjOkT/B/W3i1KBFeTSdARk1UbWLoeKMIk+WktKcXTtDxuazboJb8/4WaKgt6/rFMdL182ttz3DjG64t3+5I8SlkMtotKmt7cq1M3wxX8VSjH6vlv101O7qQbehoWlijnfj0SRv4aA7aiXVPWkyT1xjulJAYYgNAfWSnOBsb7Dx0hQ31XFupsJIRNhHsEfELo2ScNvSJ3AMfCtaOJb+GW1o2UQzpXoecJgxa0S6UFoeodq9dYuFd/gm6jAHMaKcECh2vFBySU0NKAXq8F9cxqht38LLWha6F0jb7EmEE5dfCaEyRzUv10wbyGhIOdht+7wRV7u56+tl1ch/q2oPuJlTzbaIp55dJIig5L54aRi0RGFQ52skCnP854/5rREBW0sTPTVTgjBbUUqU8iFLiqaUvPU5Xc6gbdR9D88bwtaRjINNj6DlNXXW0dGnOWfEqmlwFt8vJExWsTatK6o8h2rhn5C7eSdo+2WkKs2PZTbuFlf30ogaDqvyKz/bNK9WLs9w=
+  on:
+    tags: true
+    repo: doublemix/combine-objects
