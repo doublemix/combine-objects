@@ -11,25 +11,22 @@
     "url": "https://github.com/doublemix/combine-objects.git"
   },
   "scripts": {
+    "lint": "eslint ./src",
+    "build:babel": "rm -rf ./dist && babel ./src -d ./dist",
+    "build:rollup": "rm -rf ./dist && rollup -c rollup.config.js",
+    "build": "npm run build:rollup",
     "test": "mocha",
     "cover": "nyc mocha",
-    "compile": "babel src --out-dir .compiled --source-maps",
-    "prepare": "npm run build",
-    "lint": "eslint ./src",
-    "build": "rollup -c rollup.config.js"
+    "prepublishOnly": "npm run cover && npm run build"
   },
   "author": "Mitchel Myers <doublemx2@gmail.com>",
   "license": "ISC",
   "devDependencies": {
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
-    "@babel/plugin-external-helpers": "^7.0.0",
-    "@babel/plugin-transform-runtime": "^7.0.0",
     "@babel/polyfill": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/register": "^7.0.0",
-    "@babel/runtime-corejs2": "^7.0.0",
-    "babel-loader": "^8.0.0",
     "babel-plugin-add-module-exports": "^0.2.1",
     "chai": "^4.1.2",
     "coveralls": "^3.0.0",
@@ -39,7 +36,6 @@
     "istanbul": "^1.1.0-alpha.1",
     "jsonfile": "^4.0.0",
     "mocha": "^5.1.0",
-    "moment": "^2.22.1",
     "nyc": "^14.1.1",
     "rollup": "^0.59.2",
     "rollup-plugin-babel": "^4.0.1",
