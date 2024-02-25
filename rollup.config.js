@@ -12,10 +12,17 @@ babelrc.presets = babelrc.presets.map((x) => (x === 'env' ? ['env', { modules: f
 export default [
   {
     input: 'src/index.js',
-    output: {
-      file: 'dist/index.js',
-      format: 'cjs',
-    },
+    output: [
+      {
+        format: 'cjs',
+        file: 'dist/index.js',
+      },
+      {
+        format: 'umd',
+        file: 'dist/umd/combine.js',
+        name: 'combine',
+      }
+    ],
     plugins: [
       babel({
         babelrc: false,
