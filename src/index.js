@@ -1,8 +1,8 @@
 /* eslint-disable max-classes-per-file */
 
-import isPlainObject from 'is-plain-object';
+import isPlainObject from './is-plain-object';
 
-import { withScalarsDeprecationWarning, opaqueFunctionDeprecationWarning } from './warnings';
+import { opaqueFunctionDeprecationWarning } from './warnings';
 
 const EMPTY = {};
 
@@ -19,6 +19,12 @@ class Replace {
   }
 }
 
+class Chain {
+  constructor (updates) {
+    this.updates = updates;
+  }
+}
+
 class Remove {}
 class Ignore {}
 
@@ -26,7 +32,6 @@ const symbols = {
   opaque: '@@combineObjects/opaque',
   remove: new Remove(),
   ignore: new Ignore(),
-  scalars: '@@combineObjects/scalars',
 };
 
 function setSymbolLikeProperty(obj, property, value) {
@@ -39,11 +44,10 @@ function setSymbolLikeProperty(obj, property, value) {
 }
 
 const replace = (obj) => new Replace(obj);
+const chain = (...updates) => new Chain(updates);
 const remove = () => symbols.remove;
 const ignore = () => symbols.ignore;
-const withScalars = (obj, scalars) => {
-  setSymbolLikeProperty(obj, symbols.scalars, scalars); return obj;
-};
+
 const opaque = (obj) => {
   if (!isPlainObject(obj)) {
     opaqueFunctionDeprecationWarning();
@@ -58,11 +62,6 @@ const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
 const isReplace = (obj) => obj instanceof Replace;
 const isIgnore = (obj) => obj instanceof Ignore;
 const isOpaque = (obj) => isObject(obj) && !!obj[symbols.opaque];
-const hasScalars = (obj) => (
-  isObject(obj) && Object.prototype.hasOwnProperty.call(obj, symbols.scalars)
-);
-const getScalars = (obj) => obj[symbols.scalars];
-const isScalarProp = (obj, prop) => hasScalars(obj) && getScalars(obj).indexOf(prop) !== -1;
 
 function removeIfNecessary(obj, prop) {
   if (shouldRemove(obj, prop)) {
@@ -74,10 +73,6 @@ function removeIfNecessary(obj, prop) {
 
 function combineObjects(source, update) {
   const result = {};
-  if (hasScalars(source)) {
-    withScalarsDeprecationWarning();
-    withScalars(result, getScalars(source));
-  }
   [
     ...Object.keys(source),
     ...Object.keys(update),
@@ -88,7 +83,7 @@ function combineObjects(source, update) {
     if (Object.prototype.hasOwnProperty.call(update, prop)) {
       // mutually recursive functions
       // eslint-disable-next-line no-use-before-define
-      result[prop] = internalCombine(source[prop], update[prop], prop, isScalarProp(source, prop));
+      result[prop] = internalCombine(source[prop], update[prop], prop);
       removeIfNecessary(result, prop);
     } else {
       result[prop] = source[prop];
@@ -106,9 +101,9 @@ function shouldReplace(source, update) {
   );
 }
 
-function internalCombine(source, update, key = undefined, isScalarField = false) {
+function internalCombine(source, update, key = undefined) {
   if (isFunction(update)) {
-    return internalCombine(source, update(source, key), key, isScalarField);
+    return internalCombine(source, update(source, key), key);
   }
   if (isOpaque(update)) {
     return update;
@@ -125,29 +120,43 @@ function internalCombine(source, update, key = undefined, isScalarField = false)
     }
     return update;
   }
-  if (isScalarField) {
-    return update;
-  }
   return combineObjects(source, update);
 }
 function internalCombine2(source, update) {
   const result = internalCombine(source, update);
   return result === symbols.remove ? undefined : result;
 }
-function combine(source, ...updates) {
-  return updates.reduce((src, update) => (
-    internalCombine2(src, update)
-  ), source);
+function internalCombine3(source, update) {
+  if (update instanceof Chain) {
+    return update.reduce((src, singleUpdate) => {
+      internalCombine3(source, singleUpdate)
+    }, source)
+  }
+  return internalCombine2(source, update)
 }
+function combine(source, ...updates) {
+  let update = updates[0]
+  if (updates.length > 1) {
+    multipleUpdatesWarning()
+    update = chain(updates)
+  }
+  return internalCombine3(source, update)
+}
+
 
 combine.replace = replace;
 combine.remove = remove;
 combine.ignore = ignore;
-combine.withScalars = withScalars;
 combine.opaque = opaque;
 combine.isOpaque = isOpaque;
-combine.hasScalars = hasScalars;
-combine.getScalars = getScalars;
-combine.isScalarProp = isScalarProp;
+combine.chain = chain;
 
 export default combine;
+export {
+  replace,
+  remove,
+  ignore,
+  opaque,
+  isOpaque,
+  chain,
+}
