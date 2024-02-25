@@ -9,9 +9,9 @@ export function deprecationWarning(message) {
   };
 }
 
-export const withScalarsDeprecationWarning = deprecationWarning(
-  '`withScalars` is deprecated and set to be removed in v1.0.0',
-);
 export const opaqueFunctionDeprecationWarning = deprecationWarning(
   '`opaque` should only be used with plain objects. Try using `replace` instead',
 );
+export const multipleUpdatesDeprecationWarnings = deprcationWarning(
+  'passing multiple updates to `combine` is deprecated. Use `chain` instead.'
+)
