@@ -13,8 +13,8 @@
   },
   "scripts": {
     "lint": "eslint ./src",
-    "build:babel": "rm -rf ./dist && babel ./src -d ./dist",
-    "build:rollup": "rm -rf ./dist && rollup -c rollup.config.js",
+    "build:babel": "rimraf ./dist && babel ./src -d ./dist",
+    "build:rollup": "rimraf ./dist && rollup -c rollup.config.mjs",
     "build": "npm run build:rollup",
     "test": "mocha",
     "cover": "nyc mocha"
@@ -37,10 +37,8 @@
     "jsonfile": "^4.0.0",
     "mocha": "^5.1.0",
     "nyc": "^14.1.1",
+    "rimraf": "^5.0.5",
     "rollup": "^4.12.0"
-  },
-  "dependencies": {
-    "is-plain-object": "^2.0.4"
   },
   "nyc": {
     "reporter": [
