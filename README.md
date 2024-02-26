@@ -13,18 +13,33 @@ npm install --save @doublemx2/combine-objects
 
 ## Purpose
 
-This library was designed to simplify working with `Object.assign` to update parts of deeply nested objects, immutably.
+This library was designed to simplify working with `Object.assign` to update parts of deeply nested objects, in an immutable.
 
-The goal is to simplify code like this:
+The goal was to simplify code like this:
 
 ```javascript
-Object.assign({}, state, {
+return Object.assign({}, state, {
   app: Object.assign({}, state.app, {
     feature: Object.assign({}, state.app.feature, {
       field: newValue,
     }),
   }),
 });
+```
+
+Modern JavaScript has the object spread operator, `...`, which removes the `Object.assign` calls. However, even this gets cumbersome at deeply nested levels, as you need to spread the full path to the state.
+
+```javascript
+return {
+  ...state,
+  app: {
+    ...state.app,
+    feature: {
+      ...state.app.feature,
+      field: newValue,
+    }
+  }
+}
 ```
 
 ## Usage
@@ -49,8 +64,8 @@ The general usage of the `combine` function:
 combine(source, update);
 ```
 
-The library automatically merges properties the `source` and `update` object.
-Then it does this recursively, until one of the values is unmergable, like string or number, which it replaces.
+The library automatically merges properties from the `source` and `update` object.
+Then it does this recursively for each property, until one of the values is a scalar, like string or number. In this case, the value is replaced with the value in `update`.
 Properties not listed in the `update` are copied over (objects will be referentially equal).
 Properties in `update`, but not in `source` will be created.
 The operation will not mutate the `source` or `update`.
@@ -59,7 +74,7 @@ The operation will not mutate the `source` or `update`.
 
 ### What's mergable?
 
-In general, plain javascript objects, like those created with a literal. Function, arrays, objects created with `new` are generally not mergable. Also, most booleans, strings, numbers, Symbols, `undefined`, and `null` should not be mergable. The term scalar is used to refer to unmergable values.
+In general, plain JavaScript objects, like those created with an object literal are considered for merging. Function, arrays, objects created with `new` are generally not mergable. Also,  booleans, strings, numbers, Symbols, `undefined`, and `null` are not mergable. The term scalar is used to refer to unmergable values.
 
 ### Specific usages
 
@@ -105,27 +120,13 @@ combine({
 }
 ```
 
-To do multiple updates at once (uses variable args):
-
-```javascript
-combine(
-  { x: 5 },
-  { y: 6 },
-  { z: 7 },
-) === {
-  x: 5,
-  y: 6,
-  z: 7
-}
-```
-
 ### Opting out of merge
 
-The default behavior when the `source` and `update` are both plain objects is to merge the objects.  However, sometimes it is necessary to replace (rather than merge) an object. There are three mechanisms for doing this provided by the library. They all allow this to be accomplished but have slightly different semantics. They are all available as functions on the default export of the library. (Non-enumerable properties are used (see notes below)).
+The default behavior when the `source` and `update` are both plain objects is to merge the objects.  However, sometimes it is necessary to replace (rather than merge) an object. The library provides a handful of methods that allow this, each with slightly different semantics and use cases. They are all available as functions on the default export of the library.
 
 #### Replace
 
-The `replace` function is used on the `update` object to say that the object should replace, whatever is in the `source`, even if its another plain object.
+The `replace` function is used on the `update` object to say that the object should replace whatever is in the `source`, even if its another plain object.
 It can be used in properties as well:
 
 ```javascript
@@ -144,11 +145,15 @@ combine({
 Note that `replace` only signifies to replace the property one time. The next combine has the potential to merge.
 
 ```javascript
-combine(
+const combined = combine(
   { x: 5 },
-  replace({ y: 6 }),
+  replace({ y: 6 })
+)
+
+combine(
+  combined,
   { z: 7 },
-} ==== {
+ ) ==== {
   y: 6,
   z: 7,
 }
@@ -156,7 +161,7 @@ combine(
 
 #### Opaque
 
-Indicates that the object should be treated as though it is not mergable, like it's a string or number or something scalar. It can be used in properties as well
+Indicates that the object should be treated as though it is not mergable, like it's a string or number or something else scalar. It can be used in properties as well
 
 ```javascript
 const opaque = combine.opaque;
@@ -174,39 +179,22 @@ combine({
 Opaqueness sticks with objects, unlike the effect of replace, so it cannot be merged even if it's in the source.
 
 ```javascript
-combine(
+const combined = combine(
   { x: 5 },
-  opaque({ y: 6 }),
+  opaque({ y: 6 })
+)
+
+combine(
+  combined,
   { z: 7 },
 ) ==== { z: 7 }
 ```
 
-(Note that there is an additional non-enumerable property on each of the opaque objects, but the deep equal provided by mocha expectations does not consider this as inequal (convenient for tests) (possibly because it's not iterable))
-
-#### With scalars
-
-The `withScalars` function identifies a list of properties on an object which should always be treated as scalars. This only applies to the `source` object. The scalars will be copied over to the updated object, so they remain active through many updates.
-
-```javascript
-const withScalars = combine.withScalars;
-const obj = withScalars({
-  x: { y: 6 },
-  z: { y: 7 },
-}, ["x"]); // mark x as a scalar property
-combine(obj, {
-  x: { a: 8 },
-  z: { b: 9 },
-}) ==== {
-  x: { a: 8 }, // replaced because x is scalar
-  z: { y: 7, b: 9 } // merged
-}
-```
-
-This, like `opaque`, uses a non-enumerable property on the object.
+**Note:** Opaque adds a (non-enumerable) property to objects to implement this feature.
 
 ### Removing properties
 
-With the default behavior, you can replace and add properties, but you cannot remove props. The `remove` function, available on the default export allows the removal of properties.
+With the default behavior, properties can be updated and created, but not removed. The `remove` function, available on the default export allows for the removal of properties.
 
 ```javascript
 const remove = combine.remove
@@ -223,31 +211,27 @@ combine({
 
 ### Transforms
 
-By default, when a function is supplied as the value in an update, it is used to transform the current value to the new value. The function receives, as it only parameter, the current value. It will receive `undefined` if the property does not exist. It should return the new value.
+When a function is supplied as the value of an update, it is used to transform the current value to the new value. The function receives, as its first parameter, the current value. It will receive `undefined` if the property does not exist. It should return the new value. 
 
 ```javascript
-const add1 = (x) => x + 1;
 combine({
   x: 5,
 }, {
-  x: add1,
+  x: it => it + 1,
 }) ==== {
   x: 6
 };
 ```
 
-(I find this useful when I want to, say, append to an array)
+This can be useful for applying more complicated updates. For example, if we want to add a value to an array.
 
 ```javascript
-combine(obj, { anArray: (arr) => [...arr, newElement] })
+combine(obj, { anArray: it => [...it, newElement] })
 ```
 
 It's the user's responsibility to maintain immutability with function transforms (if desired)
 
-It should be noted that functions transform are applied recursively as well. That means the library can:
-
-- return another function, which will then be called with the same value as the first (this isn't particularly useful (in my experience so far), but is just how the library works)
-- more usefully: return a mergable object will be used to update the current value
+It should be noted that functions transform are applied recursively as well. That means the library can return a mergable object that will be used to update the current value.
 
   ```javascript
   combine({
@@ -259,7 +243,9 @@ It should be noted that functions transform are applied recursively as well. Tha
   };
   ```
 
-The transforms can be used to tranform scalar objects/properties, but should not merge (due to scalars). A transform can also elect to remove a property
+The transforms can be used to tranform scalar objects/properties.
+
+A transform can also elect to remove a property:
 
 ```javascript
 combine({
@@ -269,7 +255,7 @@ combine({
 }) ==== {};
 ```
 
-Additionally, when a function transform is applied while merging objects, the property name will be passed as the second argument to the transformer. This can be occasionally useful if property name was computed, and you need to use it to look up something in another object. The following example is contrived.
+Additionally, the property name will be passed as the second argument to the transformer, if the transformer is applied to an object property. This can be occasionally useful if property name was computed, and you need to use it to look up something in another object. The following example is contrived.
 
 ```javascript
 const state = {
@@ -291,13 +277,15 @@ const result = combine(state, {
     }),
   },
 });
-result.counters === {
+result.counters ==== {
   abc: { count: 6 },
   def: { count: 2 },
 };
 ```
 
-To store a function through an update you can use the `replace` function. (Previously, `opaque` was used for this; that is now deprecated).
+<!-- TODO write about update functions conventions -->
+
+You can use `replace` to preserve a function passed as an update, so that it does not get called as a transformer.
 
 ```javascript
 function f () {}
@@ -309,7 +297,7 @@ const obj = combine({
 obj.x === f;
 ```
 
-#### Ignoring a update (or using the source)
+### Ignoring a update (or using the source)
 
 The `ignore` function can be used to instruct the `combine` function to use the source as the result without any merging (i.e. *ignore* the update). This maintains referential integrity.
 
@@ -333,15 +321,22 @@ combine({ editing: true, x: 5 }, incrementIfEditing).x === 6;
 combine({ editing: false, x: 5 }, incrementIfEditing).x === 5; // did not increment
 ```
 
-The alternative to `ignore` would be to return the object. Since `ignore` maintains referential integrity it doesn't trigger merge semantics (which may be redundant, or even destructive if the source has functions in it).
+### Chains of updates
 
-Note: It is essentially a shortcut for calling `replace` with the source.
+It is occasionally useful to apply multiple updates to the source. This is especially useful when composing reusable updates. Chain takes updates as variable arguments.
 
-### Notes
+```javascript
+const increment = it => it + 1
+const double = it => it * it
 
-The `opaque` and `withScalars` functions set non-enumerable properties on the input (mutating). Those properties are still writable and configurable. They need to mutate the object because they effect the way it behaves with this library. Usually these are newly constructed objects (e.g. `opaque({ x: 5 })`), so it can be thought of as part of the construction process. These function return their modified input object (for fluency).
+combine(5, chain(increment, double)) ==== 12
+```
 
-Another note about `opaque`, if it is called on a non-plain object, it will defer to `replace`. This is because `opaque` used to be what was used to store a function (rather than applying it as a transform). This use case is now deprecated and `replace` should be used on functions.
+## Notes
+
+The `opaque` function sets a non-enumerable properties on the input. This is mutating, but necessary to effect the way the object behaves in the library. Typically, `opaque` will be called with a newly constructed object, so it can be seem as part of the construction (and not as a mutating operation).
+
+If `opaque` is called on a non-mergable object, it will defer to `replace`. Mergable objects are the only values which are treating specially as either the update of the source, so `replace` suffices for all other values. It is considered deprecated behavior to use `opaque` on non-mergable objects, and may stop working in the future.
 
 ## Tests
 
