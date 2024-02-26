@@ -12,6 +12,6 @@ export function deprecationWarning(message) {
 export const opaqueFunctionDeprecationWarning = deprecationWarning(
   '`opaque` should only be used with plain objects. Try using `replace` instead',
 );
-export const multipleUpdatesDeprecationWarnings = deprcationWarning(
+export const multipleUpdatesDeprecationWarnings = deprecationWarning(
   'passing multiple updates to `combine` is deprecated. Use `chain` instead.'
 )

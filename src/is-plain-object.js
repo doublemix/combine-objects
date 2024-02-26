@@ -9,7 +9,7 @@ function isObject(o) {
   return Object.prototype.toString.call(o) === "[object Object]";
 }
 
-export function isPlainObject(o) {
+export default function isPlainObject(o) {
   var ctor, prot;
 
   if (isObject(o) === false) return false;

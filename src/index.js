@@ -2,7 +2,7 @@
 
 import isPlainObject from './is-plain-object';
 
-import { opaqueFunctionDeprecationWarning } from './warnings';
+import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning } from './warnings';
 
 const EMPTY = {};
 
@@ -62,6 +62,8 @@ const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
 const isReplace = (obj) => obj instanceof Replace;
 const isIgnore = (obj) => obj instanceof Ignore;
 const isOpaque = (obj) => isObject(obj) && !!obj[symbols.opaque];
+const isChain = (obj) => obj instanceof Chain;
+const isRemove = (value) => value === symbols.remove;
 
 function removeIfNecessary(obj, prop) {
   if (shouldRemove(obj, prop)) {
@@ -73,17 +75,17 @@ function removeIfNecessary(obj, prop) {
 
 function combineObjects(source, update) {
   const result = {};
-  [
-    ...Object.keys(source),
-    ...Object.keys(update),
-  ].forEach((prop) => {
-    if (Object.prototype.hasOwnProperty.call(result, prop)) {
-      return; // already processed
+  const keysToUpdate = Object.keys(source)
+  for (const key of Object.keys(update)) {
+    if (!keysToUpdate.includes(key)) {
+      keysToUpdate.push(key)
     }
+  }
+  keysToUpdate.forEach((prop) => {
     if (Object.prototype.hasOwnProperty.call(update, prop)) {
       // mutually recursive functions
       // eslint-disable-next-line no-use-before-define
-      result[prop] = internalCombine(source[prop], update[prop], prop);
+      result[prop] = internalCombine(source[prop], update[prop], prop, Object.hasOwnProperty.call(source, prop));
       removeIfNecessary(result, prop);
     } else {
       result[prop] = source[prop];
@@ -101,7 +103,27 @@ function shouldReplace(source, update) {
   );
 }
 
-function internalCombine(source, update, key = undefined) {
+function internalCombine(source, update, key = undefined, propertyDefinedOnParent = null) {
+  if (isChain(update)) {
+    let _result = source
+    let _propertyDefinedOnParent = propertyDefinedOnParent
+    let _lastIsIgnore = false
+
+    for (const _update of update.updates) {
+      _lastIsIgnore = false
+      var _intermediateResult = internalCombine(_result, _update, key, _propertyDefinedOnParent)
+      if (isRemove(_intermediateResult)) {
+        _result = undefined
+        if (_propertyDefinedOnParent !== null) _propertyDefinedOnParent = false
+      } else if (isIgnore(_intermediateResult)) {
+      } else {
+        if (_propertyDefinedOnParent !== null) _propertyDefinedOnParent = true
+        _result = _intermediateResult
+      }
+    }
+
+    return _propertyDefinedOnParent === false ? remove() : _result
+  }
   if (isFunction(update)) {
     return internalCombine(source, update(source, key), key);
   }
@@ -112,7 +134,11 @@ function internalCombine(source, update, key = undefined) {
     return update.value;
   }
   if (isIgnore(update)) {
-    return source;
+    if (propertyDefinedOnParent === false) {
+      return remove()
+    } else {
+      return source;
+    }
   }
   if (shouldReplace(source, update)) {
     if (isPlainObject(update)) {
@@ -126,21 +152,13 @@ function internalCombine2(source, update) {
   const result = internalCombine(source, update);
   return result === symbols.remove ? undefined : result;
 }
-function internalCombine3(source, update) {
-  if (update instanceof Chain) {
-    return update.reduce((src, singleUpdate) => {
-      internalCombine3(source, singleUpdate)
-    }, source)
-  }
-  return internalCombine2(source, update)
-}
 function combine(source, ...updates) {
   let update = updates[0]
-  if (updates.length > 1) {
-    multipleUpdatesWarning()
-    update = chain(updates)
+  if (updates.length !== 1) {
+    multipleUpdatesDeprecationWarnings()
+    update = chain(...updates)
   }
-  return internalCombine3(source, update)
+  return internalCombine2(source, update)
 }
 
 
