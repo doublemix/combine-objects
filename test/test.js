@@ -294,4 +294,27 @@ describe("combineObjects", () => {
 
     expect(checks).to.deep.equal(["here", "not here", "here"])
   })
+  it("should allow transformers to call an combine as their third argument, and respond to remove() being returned", () => {
+    const arrayMap = (update) => (it, _, internalCombine) => {
+      const result = []
+      let index = 0
+      for (const item of it) {
+        const { result: itemResult, isPresent: isItemPresent } = internalCombine(item, update, index)
+        if (isItemPresent) {
+          result.push(itemResult)
+        }
+        index++
+      }
+      return result
+    }
+
+    // return items whose values are less than 10 or after the fourth item
+    const result = combine(
+      [5, 10, 4, 20, 3, 30],
+      arrayMap((it, index) => it < 10 || index >= 4 ? ignore() : remove())
+    )
+
+    expect(result).to.deep.equal([5, 4, 3, 30])
+  })
+
 });

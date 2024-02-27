@@ -107,6 +107,15 @@ function shouldReplace(source, update) {
   );
 }
 
+function internalCombineForTransformers(source, update, key = undefined, isPresent = true) {
+  const result = internalCombine(source, update, key, isPresent)
+  const isResultPresent = !isRemove(result)
+  return {
+    result: isResultPresent ? result : undefined,
+    isPresent: isResultPresent,
+  }
+}
+
 function internalCombine(source, update, key = undefined, isPresent = true) {
   if (isChain(update)) {
     let _result = source
@@ -128,7 +137,7 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
   if (isFunction(update)) {
     const prevIsPresent = GlobalContext.isPresent
     GlobalContext.isPresent = isPresent
-    const result = internalCombine(source, update(source, key), key);
+    const result = internalCombine(source, update(source, key, internalCombineForTransformers), key);
     GlobalContext.isPresent = prevIsPresent
     return result
   }
