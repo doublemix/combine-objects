@@ -2,7 +2,7 @@ import { expect } from "chai";
 
 import combine from "../src/index";
 
-const { opaque, replace, remove, ignore, chain } = combine;
+const { opaque, replace, remove, ignore, chain, isPresent } = combine;
 
 describe("combineObjects", () => {
   it("should replace scalars with scalars", () => {
@@ -248,5 +248,50 @@ describe("combineObjects", () => {
   it("should work with remove from nested chains", () => {
     expect(combine({ x: 5 }, { x: chain(chain(remove(), ignore()), ignore()) }))
       .to.not.haveOwnProperty("x")
+  })
+  it("should throw when isPresent is called outside of a transformer", () => {
+    expect(() => { isPresent() }).to.throw();
+  })
+  it("should allow a transformer to access whether a value is present", () => {
+    const checkPresence = (valueIfPresent, valueIfAbsent) => () => replace(isPresent() ? valueIfPresent : valueIfAbsent)
+
+    const result = combine(
+      {
+        x: "present",
+      },
+      {
+        x: checkPresence("here", "not here"),
+        y: checkPresence("here", "not here"),
+      }
+    )
+
+    expect(result).to.deep.equal({
+      x: "here",
+      y: "not here",
+    })
+  })
+  it("should have the correct value for isPresent during a chain", () => {
+    const checks = []
+    const checkPresence = (value) => {
+      const _isPresent = isPresent()
+      checks.push(_isPresent ? "here" : "not here")
+      return _isPresent ? value : remove()
+    }
+    combine(
+      {
+        x: "initial",
+      },
+      {
+        x: chain(
+          it => checkPresence(it),
+          remove(),
+          it => checkPresence(it),
+          "update",
+          it => checkPresence(it),
+        )
+      }
+    )
+
+    expect(checks).to.deep.equal(["here", "not here", "here"])
   })
 });

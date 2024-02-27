@@ -25,6 +25,10 @@ class Chain {
   }
 }
 
+const GlobalContext = {
+  isPresent: null,
+}
+
 class Remove {}
 class Ignore {}
 
@@ -122,7 +126,11 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     return _isPresent === false ? remove() : _result
   }
   if (isFunction(update)) {
-    return internalCombine(source, update(source, key), key);
+    const prevIsPresent = GlobalContext.isPresent
+    GlobalContext.isPresent = isPresent
+    const result = internalCombine(source, update(source, key), key);
+    GlobalContext.isPresent = prevIsPresent
+    return result
   }
   if (isOpaque(update)) {
     return update;
@@ -158,6 +166,14 @@ function combine(source, ...updates) {
   return internalCombine2(source, update)
 }
 
+function isPresent () {
+  if (GlobalContext.isPresent === null) {
+    throw new Error("Cannot access isPresent() outside of transformer")
+  } else {
+    return GlobalContext.isPresent
+  }
+}
+
 
 combine.replace = replace;
 combine.remove = remove;
@@ -165,6 +181,7 @@ combine.ignore = ignore;
 combine.opaque = opaque;
 combine.isOpaque = isOpaque;
 combine.chain = chain;
+combine.isPresent = isPresent;
 
 export default combine;
 export {
@@ -175,4 +192,5 @@ export {
   opaque,
   isOpaque,
   chain,
+  isPresent,
 }
