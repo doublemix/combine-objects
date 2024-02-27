@@ -103,26 +103,23 @@ function shouldReplace(source, update) {
   );
 }
 
-function internalCombine(source, update, key = undefined, propertyDefinedOnParent = null) {
+function internalCombine(source, update, key = undefined, isPresent = true) {
   if (isChain(update)) {
     let _result = source
-    let _propertyDefinedOnParent = propertyDefinedOnParent
-    let _lastIsIgnore = false
+    let _isPresent = isPresent
 
     for (const _update of update.updates) {
-      _lastIsIgnore = false
-      var _intermediateResult = internalCombine(_result, _update, key, _propertyDefinedOnParent)
+      var _intermediateResult = internalCombine(_result, _update, key, _isPresent)
       if (isRemove(_intermediateResult)) {
         _result = undefined
-        if (_propertyDefinedOnParent !== null) _propertyDefinedOnParent = false
-      } else if (isIgnore(_intermediateResult)) {
+        _isPresent = false
       } else {
-        if (_propertyDefinedOnParent !== null) _propertyDefinedOnParent = true
         _result = _intermediateResult
+        _isPresent = true
       }
     }
 
-    return _propertyDefinedOnParent === false ? remove() : _result
+    return _isPresent === false ? remove() : _result
   }
   if (isFunction(update)) {
     return internalCombine(source, update(source, key), key);
@@ -134,7 +131,7 @@ function internalCombine(source, update, key = undefined, propertyDefinedOnParen
     return update.value;
   }
   if (isIgnore(update)) {
-    if (propertyDefinedOnParent === false) {
+    if (isPresent === false) {
       return remove()
     } else {
       return source;
@@ -171,6 +168,7 @@ combine.chain = chain;
 
 export default combine;
 export {
+  combine,
   replace,
   remove,
   ignore,
