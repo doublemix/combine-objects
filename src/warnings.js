@@ -1,17 +1,35 @@
-export function deprecationWarning(message) {
-  let displayed = false;
-  return function _deprecationWarning() {
-    if (!displayed) {
+const warningState = { displayed: {}, testMode: false }
+export function warning(key, message) {
+  return function _warning() {
+    if (!warningState.displayed[key]) {
       // eslint-disable-next-line no-console
-      console.warn(message);
-      displayed = true;
+      if (!warningState.testMode) console.warn(message);
+      warningState.displayed[key] = true;
     }
   };
 }
 
-export const opaqueFunctionDeprecationWarning = deprecationWarning(
+export const opaqueFunctionDeprecationWarning = warning(
+  'opaqueFunctionDeprecation',
   '`opaque` should only be used with plain objects. Try using `replace` instead',
 );
-export const multipleUpdatesDeprecationWarnings = deprecationWarning(
+export const multipleUpdatesDeprecationWarnings = warning(
+  'multipleUpdatesDeprecation',
   'passing multiple updates to `combine` is deprecated. Use `chain` instead.'
 )
+export const possibleIncorrectTransformCreatorUseWarning = warning(
+  'possibleIncorrectTransformCreatorUse',
+  'A transform returned another transform. This may indicate invalid transform use. If this is intentional, mark return transforms with `transform`'
+)
+
+
+// test
+export function __resetWarnings() {
+  warningState.displayed = {}
+}
+export function __setTestMode(isTestMode) {
+  warningState.testMode = isTestMode
+}
+export function __isWarningDisplayed(key) {
+  return !!warningState.displayed[key]
+}

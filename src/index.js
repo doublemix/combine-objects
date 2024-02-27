@@ -2,7 +2,7 @@
 
 import isPlainObject from './is-plain-object';
 
-import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning } from './warnings';
+import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning, possibleIncorrectTransformCreatorUseWarning } from './warnings';
 
 const EMPTY = {};
 
@@ -36,6 +36,7 @@ const symbols = {
   opaque: '@@combineObjects/opaque',
   remove: new Remove(),
   ignore: new Ignore(),
+  transform: '@@combineObjects/transform'
 };
 
 function setSymbolLikeProperty(obj, property, value) {
@@ -60,6 +61,14 @@ const opaque = (obj) => {
   setSymbolLikeProperty(obj, symbols.opaque, true);
   return obj;
 };
+
+const transform = (maybeTransform) => {
+  if (isFunction(maybeTransform)) {
+    setSymbolLikeProperty(maybeTransform, symbols.transform, true)
+    return maybeTransform
+  }
+  throw new Error("transform should only be called on transformers (functions).")
+}
 
 const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
 
@@ -137,9 +146,19 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
   if (isFunction(update)) {
     const prevIsPresent = GlobalContext.isPresent
     GlobalContext.isPresent = isPresent
-    const result = internalCombine(source, update(source, key, internalCombineForTransformers), key);
+    const computedUpdate = update(source, key, internalCombineForTransformers);
     GlobalContext.isPresent = prevIsPresent
-    return result
+
+    if (isFunction(computedUpdate)) {
+      if (!computedUpdate[symbols.transform]) {
+        possibleIncorrectTransformCreatorUseWarning()
+      } else {
+        // the `transform` is meant to be a temporary used only at time of return, prevents a function from remaining marked as a intentional transform return
+        delete computedUpdate[symbols.transform]
+      }
+    }
+
+    return internalCombine(source, computedUpdate, key, isPresent)
   }
   if (isOpaque(update)) {
     return update;
@@ -191,6 +210,7 @@ combine.opaque = opaque;
 combine.isOpaque = isOpaque;
 combine.chain = chain;
 combine.isPresent = isPresent;
+combine.transform = transform
 
 export default combine;
 export {
@@ -202,4 +222,5 @@ export {
   isOpaque,
   chain,
   isPresent,
+  transform,
 }

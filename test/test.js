@@ -1,10 +1,21 @@
 import { expect } from "chai";
 
 import combine from "../src/index";
+import { __isWarningDisplayed, __resetWarnings, __setTestMode } from "../src/warnings";
 
-const { opaque, replace, remove, ignore, chain, isPresent } = combine;
+const { opaque, replace, remove, ignore, chain, isPresent, transform } = combine;
 
 describe("combineObjects", () => {
+  before(() => {
+    __setTestMode(true)
+  })
+  after(() => {
+    __setTestMode(false)
+  })
+  beforeEach(() => {
+    __resetWarnings()
+  })
+
   it("should replace scalars with scalars", () => {
     expect(combine(4, 5)).to.eql(5);
     expect(combine("string", "other")).to.eql("other");
@@ -316,5 +327,31 @@ describe("combineObjects", () => {
 
     expect(result).to.deep.equal([5, 4, 3, 30])
   })
+  it("should warn if a possible invalid transform use is detected", () => {
+    const increment = () => it => it + 1
 
+    const result = combine(1, increment)
+    expect(result).to.equal(2)
+
+    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+  })
+  it("should not warn if transform is explicitly returned", () => {
+    const doubleTransform = () => it => transform(it2 => it + it2)
+
+    const result = combine(2, doubleTransform())
+    expect(result).to.equal(4)
+
+    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.false
+  })
+  it("should warn it same function is re-used after being marked transform", () => {
+    const incrementTransform = it => it + 1
+
+    combine({ x: 1 }, { x: () => transform(incrementTransform) })
+
+    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.false
+
+    combine({ x: 1 }, { x: () => incrementTransform })
+
+    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+  })
 });
