@@ -2,7 +2,7 @@
 
 import isPlainObject from './is-plain-object';
 
-import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning, possibleIncorrectTransformCreatorUseWarning } from './warnings';
+import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning, possibleIncorrectUpdateCreatorUseWarning } from './warnings';
 
 const EMPTY = {};
 
@@ -37,7 +37,7 @@ const symbols = {
   opaque: '@@combineObjects/opaque',
   remove: new Remove(),
   ignore: new Ignore(),
-  transformCreator: '@@combineObjects/transformCreator'
+  updateCreator: '@@combineObjects/updateCreator'
 };
 
 function setSymbolLikeProperty(obj, property, value) {
@@ -75,12 +75,12 @@ function transform (maybeTransform) {
   throw new Error("transform should only be called on transformers (functions).")
 }
 
-function transformCreator (transformCreator) {
-  if (isFunction(transformCreator)) {
-    setSymbolLikeProperty(transformCreator, symbols.transformCreator, true)
-    return transformCreator
+function updateCreator (updateCreator) {
+  if (isFunction(updateCreator)) {
+    setSymbolLikeProperty(updateCreator, symbols.updateCreator, true)
+    return updateCreator
   }
-  throw new Error("transformCreator should only be called on functions.")
+  throw new Error("updateCreator should only be called on functions.")
 }
 
 const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
@@ -157,8 +157,8 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     return _isPresent === false ? remove() : _result
   }
   if (isFunction(update)) {
-    if (update[symbols.transformCreator]) {
-      throw new Error("Transform creator cannot be called as transformer, creators should be called during update creation")
+    if (update[symbols.updateCreator]) {
+      throw new Error("Update creator cannot be called as transformer, creators should be called during update creation")
     }
     let computedUpdate;
     const prevIsPresent = GlobalContext.isPresent
@@ -174,7 +174,7 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
 
     if (isFunction(computedUpdate)) {
       if (!markedTransforms.includes(computedUpdate)) {
-        possibleIncorrectTransformCreatorUseWarning()
+        possibleIncorrectUpdateCreatorUseWarning()
       }
     }
 
@@ -230,6 +230,6 @@ combine.isOpaque = isOpaque;
 combine.chain = chain;
 combine.isPresent = isPresent;
 combine.transform = transform;
-combine.transformCreator = transformCreator;
+combine.updateCreator = updateCreator;
 
 export default combine;

@@ -17,9 +17,9 @@ export const multipleUpdatesDeprecationWarnings = warning(
   'multipleUpdatesDeprecation',
   'passing multiple updates to `combine` is deprecated. Use `chain` instead.'
 )
-export const possibleIncorrectTransformCreatorUseWarning = warning(
-  'possibleIncorrectTransformCreatorUse',
-  'A transform returned another transform. This may indicate invalid transform use. If this is intentional, mark return transforms with `transform`'
+export const possibleIncorrectUpdateCreatorUseWarning = warning(
+  'possibleIncorrectUpdateCreatorUseWarning',
+  'A transform returned another transform. This may indicate invalid update creator use. If this is intentional, mark return transforms with `transform`'
 )
 
 

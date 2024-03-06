@@ -3,7 +3,7 @@ import { expect } from "chai";
 import combine from "../src/index";
 import { __isWarningDisplayed, __resetWarnings, __setTestMode } from "../src/warnings";
 
-const { opaque, replace, remove, ignore, chain, isPresent, transform, transformCreator } = combine;
+const { opaque, replace, remove, ignore, chain, isPresent, transform, updateCreator } = combine;
 
 describe("combineObjects", () => {
   before(() => {
@@ -341,7 +341,7 @@ describe("combineObjects", () => {
     const result = combine(1, increment)
     expect(result).to.equal(2)
 
-    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
   })
   it("should not warn if transform is explicitly returned", () => {
     const doubleTransform = () => it => transform(it2 => it + it2)
@@ -349,30 +349,30 @@ describe("combineObjects", () => {
     const result = combine(2, doubleTransform())
     expect(result).to.equal(4)
 
-    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.false
+    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.false
   })
   it("should warn it same function is re-used after being marked transform", () => {
     const incrementTransform = it => it + 1
 
     combine({ x: 1 }, { x: () => transform(incrementTransform) })
 
-    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.false
+    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.false
 
     __resetWarnings();
 
     combine({ x: 1 }, { x: () => incrementTransform })
 
-    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
   })
   it("should warn if transform is marked with transform() outside of combine", () => {
     const incrementTransform = transform(it => it + 1)
 
     combine({ x: 1 }, { x: () => incrementTransform })
 
-    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
   })
-  it("should throw if a transform creator is used incorrectly", () => {
-    const increment = transformCreator(() => it => it + 1)
+  it("should throw if a update creator is used incorrectly", () => {
+    const increment = updateCreator(() => it => it + 1)
 
     expect(() => combine(1, increment)).to.throw()
   })
