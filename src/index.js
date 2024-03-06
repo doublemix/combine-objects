@@ -144,10 +144,14 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     return _isPresent === false ? remove() : _result
   }
   if (isFunction(update)) {
+    let computedUpdate;
     const prevIsPresent = GlobalContext.isPresent
     GlobalContext.isPresent = isPresent
-    const computedUpdate = update(source, key, internalCombineForTransformers);
+    try {
+      computedUpdate = update(source, key, internalCombineForTransformers);
+    } finally {
     GlobalContext.isPresent = prevIsPresent
+    }
 
     if (isFunction(computedUpdate)) {
       if (!computedUpdate[symbols.transform]) {

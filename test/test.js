@@ -305,6 +305,14 @@ describe("combineObjects", () => {
 
     expect(checks).to.deep.equal(["here", "not here", "here"])
   })
+  it("should properly restore isPresent if transformer throws an error", () => {
+    try {
+      combine(1, x => { throw "error" })
+    } catch {
+      // suppress error
+    }
+    expect(() => isPresent()).to.throw()
+  })
   it("should allow transformers to call an combine as their third argument, and respond to remove() being returned", () => {
     const arrayMap = (update) => (it, _, internalCombine) => {
       const result = []
