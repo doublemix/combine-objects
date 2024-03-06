@@ -16,7 +16,7 @@
     "build:babel": "rimraf ./dist && babel ./src -d ./dist",
     "build:rollup": "rimraf ./dist && rollup -c rollup.config.mjs",
     "build": "npm run build:rollup",
-    "prepublish": "npm run build",
+    "prepublishOnly": "npm run build",
     "test": "mocha",
     "cover": "nyc mocha"
   },
