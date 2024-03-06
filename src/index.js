@@ -37,7 +37,7 @@ const symbols = {
   opaque: '@@combineObjects/opaque',
   remove: new Remove(),
   ignore: new Ignore(),
-  transform: '@@combineObjects/transform'
+  transformCreator: '@@combineObjects/transformCreator'
 };
 
 function setSymbolLikeProperty(obj, property, value) {
@@ -73,6 +73,14 @@ function transform (maybeTransform) {
     return maybeTransform
   }
   throw new Error("transform should only be called on transformers (functions).")
+}
+
+function transformCreator (transformCreator) {
+  if (isFunction(transformCreator)) {
+    setSymbolLikeProperty(transformCreator, symbols.transformCreator, true)
+    return transformCreator
+  }
+  throw new Error("transformCreator should only be called on functions.")
 }
 
 const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
@@ -149,6 +157,9 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     return _isPresent === false ? remove() : _result
   }
   if (isFunction(update)) {
+    if (update[symbols.transformCreator]) {
+      throw new Error("Transform creator cannot be called as transformer, creators should be called during update creation")
+    }
     let computedUpdate;
     const prevIsPresent = GlobalContext.isPresent
     GlobalContext.isPresent = isPresent
@@ -219,5 +230,6 @@ combine.isOpaque = isOpaque;
 combine.chain = chain;
 combine.isPresent = isPresent;
 combine.transform = transform;
+combine.transformCreator = transformCreator;
 
 export default combine;

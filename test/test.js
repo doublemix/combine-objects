@@ -3,7 +3,7 @@ import { expect } from "chai";
 import combine from "../src/index";
 import { __isWarningDisplayed, __resetWarnings, __setTestMode } from "../src/warnings";
 
-const { opaque, replace, remove, ignore, chain, isPresent, transform } = combine;
+const { opaque, replace, remove, ignore, chain, isPresent, transform, transformCreator } = combine;
 
 describe("combineObjects", () => {
   before(() => {
@@ -370,5 +370,10 @@ describe("combineObjects", () => {
     combine({ x: 1 }, { x: () => incrementTransform })
 
     expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+  })
+  it("should throw if a transform creator is used incorrectly", () => {
+    const increment = transformCreator(() => it => it + 1)
+
+    expect(() => combine(1, increment)).to.throw()
   })
 });
