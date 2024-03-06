@@ -202,7 +202,6 @@ function isPresent () {
   }
 }
 
-
 combine.replace = replace;
 combine.remove = remove;
 combine.ignore = ignore;
@@ -210,17 +209,6 @@ combine.opaque = opaque;
 combine.isOpaque = isOpaque;
 combine.chain = chain;
 combine.isPresent = isPresent;
-combine.transform = transform
+combine.transform = transform;
 
 export default combine;
-export {
-  combine,
-  replace,
-  remove,
-  ignore,
-  opaque,
-  isOpaque,
-  chain,
-  isPresent,
-  transform,
-}
