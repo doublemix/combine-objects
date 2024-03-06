@@ -27,6 +27,7 @@ class Chain {
 
 const GlobalContext = {
   isPresent: null,
+  currentTransforms: null,
 }
 
 class Remove {}
@@ -62,9 +63,13 @@ const opaque = (obj) => {
   return obj;
 };
 
-const transform = (maybeTransform) => {
+function transform (maybeTransform) {
   if (isFunction(maybeTransform)) {
-    setSymbolLikeProperty(maybeTransform, symbols.transform, true)
+    if (GlobalContext.currentTransforms !== null) {
+      GlobalContext.currentTransforms.push(maybeTransform)
+    }
+    // else, silently ignore at the outside of a transformer
+
     return maybeTransform
   }
   throw new Error("transform should only be called on transformers (functions).")
@@ -147,18 +152,18 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     let computedUpdate;
     const prevIsPresent = GlobalContext.isPresent
     GlobalContext.isPresent = isPresent
+    const prevCurrentTransforms = GlobalContext.currentTransforms
+    const markedTransforms = GlobalContext.currentTransforms = []
     try {
       computedUpdate = update(source, key, internalCombineForTransformers);
     } finally {
-    GlobalContext.isPresent = prevIsPresent
+      GlobalContext.isPresent = prevIsPresent
+      GlobalContext.currentTransforms = prevCurrentTransforms
     }
 
     if (isFunction(computedUpdate)) {
-      if (!computedUpdate[symbols.transform]) {
+      if (!markedTransforms.includes(computedUpdate)) {
         possibleIncorrectTransformCreatorUseWarning()
-      } else {
-        // the `transform` is meant to be a temporary used only at time of return, prevents a function from remaining marked as a intentional transform return
-        delete computedUpdate[symbols.transform]
       }
     }
 

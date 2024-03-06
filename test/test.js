@@ -358,6 +358,15 @@ describe("combineObjects", () => {
 
     expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.false
 
+    __resetWarnings();
+
+    combine({ x: 1 }, { x: () => incrementTransform })
+
+    expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
+  })
+  it("should warn if transform is marked with transform() outside of combine", () => {
+    const incrementTransform = transform(it => it + 1)
+
     combine({ x: 1 }, { x: () => incrementTransform })
 
     expect(__isWarningDisplayed('possibleIncorrectTransformCreatorUse')).to.be.true
