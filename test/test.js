@@ -301,6 +301,9 @@ describe("combineObjects", () => {
 
     expect(checks).to.deep.equal(["here", "not here", "here"])
   })
+  it("should set isPresent to true when called on the root level state", () => {
+    expect(combine(1, (_, __, isPresent) => isPresent ? "present" : "not present")).to.equal("present")
+  })
   it("should allow transformers to call an combine as their fourth argument, and respond to remove() being returned", () => {
     const arrayMap = (update) => (it, _, __, internalCombine) => {
       const result = []
