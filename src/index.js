@@ -49,10 +49,18 @@ function setSymbolLikeProperty(obj, property, value) {
   });
 }
 
-const replace = (obj) => new Replace(obj);
-const chain = (...updates) => new Chain(updates);
-const remove = () => symbols.remove;
-const ignore = () => symbols.ignore;
+function updateCreator (updateCreator) {
+  if (isFunction(updateCreator)) {
+    setSymbolLikeProperty(updateCreator, symbols.updateCreator, true)
+    return updateCreator
+  }
+  throw new Error("updateCreator should only be called on functions.")
+}
+
+const replace = updateCreator((obj) => new Replace(obj));
+const chain = updateCreator((...updates) => new Chain(updates));
+const remove = updateCreator(() => symbols.remove);
+const ignore = updateCreator(() => symbols.ignore);
 
 const opaque = (obj) => {
   if (!isPlainObject(obj)) {
@@ -70,14 +78,6 @@ function update (updateValue) {
 
   GlobalContext.markedUpdate = updateValue
   return updateValue
-}
-
-function updateCreator (updateCreator) {
-  if (isFunction(updateCreator)) {
-    setSymbolLikeProperty(updateCreator, symbols.updateCreator, true)
-    return updateCreator
-  }
-  throw new Error("updateCreator should only be called on functions.")
 }
 
 const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;

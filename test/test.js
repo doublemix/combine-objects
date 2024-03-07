@@ -360,4 +360,13 @@ describe("combineObjects", () => {
 
     expect(() => combine(1, increment)).to.throw()
   })
+  it('should throw if library functions are incorrectly used as transforms', () => {
+    expect(() => combine(1, replace)).to.throw()
+
+    expect(() => combine(1, remove)).to.throw()
+
+    expect(() => combine(1, ignore)).to.throw()
+
+    expect(() => combine(1, chain)).to.throw()
+  })
 });
