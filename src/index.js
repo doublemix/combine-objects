@@ -26,7 +26,8 @@ class Chain {
 }
 
 const GlobalContext = {
-  currentTransforms: null,
+  isInTransform: false,
+  markedUpdate: null,
 }
 
 class Remove {}
@@ -62,16 +63,13 @@ const opaque = (obj) => {
   return obj;
 };
 
-function transform (maybeTransform) {
-  if (isFunction(maybeTransform)) {
-    if (GlobalContext.currentTransforms !== null) {
-      GlobalContext.currentTransforms.push(maybeTransform)
-    }
-    // else, silently ignore at the outside of a transformer
-
-    return maybeTransform
+function update (updateValue) {
+  if (!GlobalContext.isInTransform) {
+    throw new Error("update should only be called within executing transformers.")
   }
-  throw new Error("transform should only be called on transformers (functions).")
+
+  GlobalContext.markedUpdate = updateValue
+  return updateValue
 }
 
 function updateCreator (updateCreator) {
@@ -160,16 +158,20 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
       throw new Error("Update creator cannot be called as transformer, creators should be called during update creation")
     }
     let computedUpdate;
-    const prevCurrentTransforms = GlobalContext.currentTransforms
-    const markedTransforms = GlobalContext.currentTransforms = []
+    const prevIsInTransform = GlobalContext.isInTransform
+    GlobalContext.isInTransform = true
+    const prevMarkedUpdate = GlobalContext.markedUpdate
+    let markedUpdate
     try {
       computedUpdate = update(source, key, isPresent, internalCombineForTransformers);
     } finally {
-      GlobalContext.currentTransforms = prevCurrentTransforms
+      GlobalContext.isInTransform = prevIsInTransform
+      markedUpdate = GlobalContext.markedUpdate
+      GlobalContext.markedUpdate = prevMarkedUpdate
     }
 
     if (isFunction(computedUpdate)) {
-      if (!markedTransforms.includes(computedUpdate)) {
+      if (markedUpdate !== computedUpdate) {
         possibleIncorrectUpdateCreatorUseWarning()
       }
     }
@@ -224,7 +226,7 @@ combine.ignore = ignore;
 combine.opaque = opaque;
 combine.isOpaque = isOpaque;
 combine.chain = chain;
-combine.transform = transform;
+combine.update = update;
 combine.updateCreator = updateCreator;
 
 export default combine;

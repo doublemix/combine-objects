@@ -3,7 +3,7 @@ import { expect } from "chai";
 import combine from "../src/index";
 import { __isWarningDisplayed, __resetWarnings, __setTestMode } from "../src/warnings";
 
-const { opaque, replace, remove, ignore, chain, transform, updateCreator } = combine;
+const { opaque, replace, remove, ignore, chain, update, updateCreator } = combine;
 
 describe("combineObjects", () => {
   before(() => {
@@ -331,18 +331,18 @@ describe("combineObjects", () => {
 
     expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
   })
-  it("should not warn if transform is explicitly returned", () => {
-    const doubleTransform = () => it => transform(it2 => it + it2)
+  it("should not warn if transform update is explicitly returned", () => {
+    const doubleTransform = () => it => update(it2 => it + it2)
 
     const result = combine(2, doubleTransform())
     expect(result).to.equal(4)
 
     expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.false
   })
-  it("should warn it same function is re-used after being marked transform", () => {
+  it("should warn it same function is re-used after being marked update()", () => {
     const incrementTransform = it => it + 1
 
-    combine({ x: 1 }, { x: () => transform(incrementTransform) })
+    combine({ x: 1 }, { x: () => update(incrementTransform) })
 
     expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.false
 
@@ -352,12 +352,8 @@ describe("combineObjects", () => {
 
     expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
   })
-  it("should warn if transform is marked with transform() outside of combine", () => {
-    const incrementTransform = transform(it => it + 1)
-
-    combine({ x: 1 }, { x: () => incrementTransform })
-
-    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
+  it("should throw if update() is used outside of combine", () => {
+    expect(() => update(it => it + 1)).to.throw()
   })
   it("should throw if a update creator is used incorrectly", () => {
     const increment = updateCreator(() => it => it + 1)
