@@ -3,7 +3,7 @@ import { expect } from "chai";
 import combine from "../src/index";
 import { __isWarningDisplayed, __resetWarnings, __setTestMode } from "../src/warnings";
 
-const { opaque, replace, remove, ignore, chain, isPresent, transform, updateCreator } = combine;
+const { opaque, replace, remove, ignore, chain, transform, updateCreator } = combine;
 
 describe("combineObjects", () => {
   before(() => {
@@ -260,11 +260,8 @@ describe("combineObjects", () => {
     expect(combine({ x: 5 }, { x: chain(chain(remove(), ignore()), ignore()) }))
       .to.not.haveOwnProperty("x")
   })
-  it("should throw when isPresent is called outside of a transformer", () => {
-    expect(() => { isPresent() }).to.throw();
-  })
   it("should allow a transformer to access whether a value is present", () => {
-    const checkPresence = (valueIfPresent, valueIfAbsent) => () => replace(isPresent() ? valueIfPresent : valueIfAbsent)
+    const checkPresence = (valueIfPresent, valueIfAbsent) => (_, __, isPresent) => replace(isPresent ? valueIfPresent : valueIfAbsent)
 
     const result = combine(
       {
@@ -283,10 +280,9 @@ describe("combineObjects", () => {
   })
   it("should have the correct value for isPresent during a chain", () => {
     const checks = []
-    const checkPresence = (value) => {
-      const _isPresent = isPresent()
-      checks.push(_isPresent ? "here" : "not here")
-      return _isPresent ? value : remove()
+    const checkPresence = () => (value, _, isPresent) => {
+      checks.push(isPresent ? "here" : "not here")
+      return isPresent ? value : remove()
     }
     combine(
       {
@@ -294,27 +290,19 @@ describe("combineObjects", () => {
       },
       {
         x: chain(
-          it => checkPresence(it),
+          checkPresence(),
           remove(),
-          it => checkPresence(it),
+          checkPresence(),
           "update",
-          it => checkPresence(it),
+          checkPresence(),
         )
       }
     )
 
     expect(checks).to.deep.equal(["here", "not here", "here"])
   })
-  it("should properly restore isPresent if transformer throws an error", () => {
-    try {
-      combine(1, x => { throw "error" })
-    } catch {
-      // suppress error
-    }
-    expect(() => isPresent()).to.throw()
-  })
-  it("should allow transformers to call an combine as their third argument, and respond to remove() being returned", () => {
-    const arrayMap = (update) => (it, _, internalCombine) => {
+  it("should allow transformers to call an combine as their fourth argument, and respond to remove() being returned", () => {
+    const arrayMap = (update) => (it, _, __, internalCombine) => {
       const result = []
       let index = 0
       for (const item of it) {

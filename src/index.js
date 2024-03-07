@@ -26,7 +26,6 @@ class Chain {
 }
 
 const GlobalContext = {
-  isPresent: null,
   currentTransforms: null,
 }
 
@@ -161,14 +160,11 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
       throw new Error("Update creator cannot be called as transformer, creators should be called during update creation")
     }
     let computedUpdate;
-    const prevIsPresent = GlobalContext.isPresent
-    GlobalContext.isPresent = isPresent
     const prevCurrentTransforms = GlobalContext.currentTransforms
     const markedTransforms = GlobalContext.currentTransforms = []
     try {
-      computedUpdate = update(source, key, internalCombineForTransformers);
+      computedUpdate = update(source, key, isPresent, internalCombineForTransformers);
     } finally {
-      GlobalContext.isPresent = prevIsPresent
       GlobalContext.currentTransforms = prevCurrentTransforms
     }
 
@@ -228,7 +224,6 @@ combine.ignore = ignore;
 combine.opaque = opaque;
 combine.isOpaque = isOpaque;
 combine.chain = chain;
-combine.isPresent = isPresent;
 combine.transform = transform;
 combine.updateCreator = updateCreator;
 
