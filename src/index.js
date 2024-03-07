@@ -212,14 +212,6 @@ function combine(source, ...updates) {
   return internalCombine2(source, update)
 }
 
-function isPresent () {
-  if (GlobalContext.isPresent === null) {
-    throw new Error("Cannot access isPresent() outside of transformer")
-  } else {
-    return GlobalContext.isPresent
-  }
-}
-
 combine.replace = replace;
 combine.remove = remove;
 combine.ignore = ignore;
