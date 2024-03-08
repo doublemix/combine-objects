@@ -6,6 +6,11 @@ import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning, p
 
 const EMPTY = {};
 
+const hasOwnProperty = Object.prototype.hasOwnProperty
+function hasOwn (object, property) {
+  return hasOwnProperty.call(object, property)
+}
+
 function isFunction(value) {
   return typeof value === 'function';
 }
@@ -30,45 +35,33 @@ const GlobalContext = {
   markedUpdate: null,
 }
 
-class Remove {}
-class Ignore {}
-
 const symbols = {
-  opaque: '@@combineObjects/opaque',
-  remove: new Remove(),
-  ignore: new Ignore(),
-  updateCreator: '@@combineObjects/updateCreator'
+  opaque: Symbol('@@combineObjects/opaque'),
+  remove: Symbol('@@combineObjects/remove'),
+  ignore: Symbol('@@combineObjects/ignore'),
+  updateCreator: Symbol('@@combineObjects/updateCreator'),
 };
-
-function setSymbolLikeProperty(obj, property, value) {
-  Object.defineProperty(obj, property, {
-    value,
-    writable: true,
-    enumerable: false,
-    configurable: true,
-  });
-}
 
 function updateCreator (updateCreator) {
   if (isFunction(updateCreator)) {
-    setSymbolLikeProperty(updateCreator, symbols.updateCreator, true)
+    updateCreator[symbols.updateCreator] = true
     return updateCreator
   }
   throw new Error("updateCreator should only be called on functions.")
 }
 
-const replace = updateCreator((obj) => new Replace(obj));
+const replace = updateCreator((value) => new Replace(value));
 const chain = updateCreator((...updates) => new Chain(updates));
 const remove = updateCreator(() => symbols.remove);
 const ignore = updateCreator(() => symbols.ignore);
 
-const opaque = (obj) => {
-  if (!isPlainObject(obj)) {
+const opaque = (value) => {
+  if (!isPlainObject(value)) {
     opaqueFunctionDeprecationWarning();
-    return replace(obj);
+    return replace(value);
   }
-  setSymbolLikeProperty(obj, symbols.opaque, true);
-  return obj;
+  value[symbols.opaque] = true;
+  return value;
 };
 
 function update (updateValue) {
@@ -80,50 +73,38 @@ function update (updateValue) {
   return updateValue
 }
 
-const shouldRemove = (obj, prop) => obj[prop] === symbols.remove;
-
-const isReplace = (obj) => obj instanceof Replace;
-const isIgnore = (obj) => obj instanceof Ignore;
-const isOpaque = (obj) => isObject(obj) && !!obj[symbols.opaque];
-const isChain = (obj) => obj instanceof Chain;
+const isReplace = (value) => value instanceof Replace;
+const isIgnore = (value) => value === symbols.ignore;
+const isOpaque = (value) => isObject(value) && !!value[symbols.opaque];
+const isChain = (value) => value instanceof Chain;
 const isRemove = (value) => value === symbols.remove;
-
-function removeIfNecessary(obj, prop) {
-  if (shouldRemove(obj, prop)) {
-    // eslint-disable-next-line no-param-reassign
-    delete obj[prop];
-  }
-  return obj; // fluency
+const isTransform = (value) => isFunction(value)
+const isScalar = (value, isUpdate) => {
+  return isOpaque(value) || !isPlainObject(value) && (!isUpdate || !isTransform(value))
 }
 
 function combineObjects(source, update) {
   const result = {};
-  const keysToUpdate = Object.keys(source)
+  const allKeys = Object.keys(source)
   for (const key of Object.keys(update)) {
-    if (!keysToUpdate.includes(key)) {
-      keysToUpdate.push(key)
+    if (!allKeys.includes(key)) {
+      allKeys.push(key)
     }
   }
-  keysToUpdate.forEach((prop) => {
-    if (Object.prototype.hasOwnProperty.call(update, prop)) {
+  for (const key of allKeys) {
+    if (hasOwn(update, key)) {
       // mutually recursive functions
       // eslint-disable-next-line no-use-before-define
-      result[prop] = internalCombine(source[prop], update[prop], prop, Object.hasOwnProperty.call(source, prop));
-      removeIfNecessary(result, prop);
+      const combineResult = internalCombine(source[key], update[key], key, hasOwn(source, key));
+      if (!isRemove(combineResult)) {
+        result[key] = combineResult
+      }
     } else {
-      result[prop] = source[prop];
+      result[key] = source[key];
     }
-  });
+  }
 
   return result;
-}
-
-function shouldReplace(source, update) {
-  return (
-    !isPlainObject(source)
-        || !isPlainObject(update)
-        || isOpaque(source)
-  );
 }
 
 function internalCombineForTransformers(source, update, key = undefined, isPresent = true) {
@@ -137,26 +118,30 @@ function internalCombineForTransformers(source, update, key = undefined, isPrese
 
 function internalCombine(source, update, key = undefined, isPresent = true) {
   if (isChain(update)) {
-    let _result = source
-    let _isPresent = isPresent
-
-    for (const _update of update.updates) {
-      var _intermediateResult = internalCombine(_result, _update, key, _isPresent)
-      if (isRemove(_intermediateResult)) {
-        _result = undefined
-        _isPresent = false
+    let result = source
+    let resultIsPresent = isPresent
+    for (const individualUpdate of update.updates) {
+      const intermediateResult = internalCombine(result, individualUpdate, key, resultIsPresent)
+      if (isRemove(intermediateResult)) {
+        result = undefined
+        resultIsPresent = false
       } else {
-        _result = _intermediateResult
-        _isPresent = true
+        result = intermediateResult
+        resultIsPresent = true
       }
     }
-
-    return _isPresent === false ? remove() : _result
+    
+    if (!resultIsPresent) {
+      return remove()
+    }
+    return result
   }
-  if (isFunction(update)) {
+
+  if (isTransform(update)) {
     if (update[symbols.updateCreator]) {
       throw new Error("Update creator cannot be called as transformer, creators should be called during update creation")
     }
+
     let computedUpdate;
     const prevIsInTransform = GlobalContext.isInTransform
     GlobalContext.isInTransform = true
@@ -170,7 +155,7 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
       GlobalContext.markedUpdate = prevMarkedUpdate
     }
 
-    if (isFunction(computedUpdate)) {
+    if (isTransform(computedUpdate)) {
       if (markedUpdate !== computedUpdate) {
         possibleIncorrectUpdateCreatorUseWarning()
       }
@@ -178,12 +163,11 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
 
     return internalCombine(source, computedUpdate, key, isPresent)
   }
-  if (isOpaque(update)) {
-    return update;
-  }
+
   if (isReplace(update)) {
     return update.value;
   }
+
   if (isIgnore(update)) {
     if (isPresent === false) {
       return remove()
@@ -191,25 +175,31 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
       return source;
     }
   }
-  if (shouldReplace(source, update)) {
-    if (isPlainObject(update)) {
-      return combineObjects(EMPTY, update); // allows nested function transforms to happen
-    }
-    return update;
+
+  if (isScalar(update, true)) {
+    return update
   }
-  return combineObjects(source, update);
+
+  let mergeSource = source
+  if (!isPresent || isScalar(source, false)) {
+    mergeSource = EMPTY; // allows nested function transforms to happen
+  }
+
+  return combineObjects(mergeSource, update);
 }
-function internalCombine2(source, update) {
+
+function internalCombineHelper(source, update) {
   const result = internalCombine(source, update);
   return result === symbols.remove ? undefined : result;
 }
+
 function combine(source, ...updates) {
   let update = updates[0]
   if (updates.length !== 1) {
     multipleUpdatesDeprecationWarnings()
     update = chain(...updates)
   }
-  return internalCombine2(source, update)
+  return internalCombineHelper(source, update)
 }
 
 combine.replace = replace;
