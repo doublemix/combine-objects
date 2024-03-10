@@ -1,6 +1,6 @@
 {
   "name": "@doublemx2/combine-objects",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Small library for combining objects",
   "files": [
     "/dist/**"
