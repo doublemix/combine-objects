@@ -193,21 +193,15 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
   return combineObjects(mergeSource, update);
 }
 
-function internalCombineHelper(source, update) {
+function combine(source, update) {
+  if (arguments.length < 2) {
+    throw new Error("Not enough arguments")
+  }
   const result = internalCombine(source, update);
   if (isRemove(result)) {
     throw new Error("Cannot return remove() from combine()")
   }
   return result;
-}
-
-function combine(source, ...updates) {
-  let update = updates[0]
-  if (updates.length !== 1) {
-    multipleUpdatesDeprecationWarnings()
-    update = chain(...updates)
-  }
-  return internalCombineHelper(source, update)
 }
 
 combine.replace = replace;

@@ -217,10 +217,9 @@ describe("combineObjects", () => {
   it("should not create a property when the update is ignore()", () => {
     expect(combine({}, { x: ignore() })).to.not.haveOwnProperty("x")
   })
-  it("should return source when no updates are passed (deprecated use)", () => {
-    const obj = {};
-    expect(combine(obj)).to.equal(obj);
-    expect(combine(5)).to.equal(5);
+  it("should throw if not enough arguments are passed", () => {
+    expect(() => combine()).to.throw()
+    expect(() => combine({})).to.throw()
   });
   // TODO could probably use more test with functions, the relation to everything else is intricate
   it("should return source when passed a chain of no updates", () => {
