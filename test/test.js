@@ -309,7 +309,7 @@ describe("combineObjects", () => {
       const result = []
       let index = 0
       for (const item of it) {
-        const { result: itemResult, isPresent: isItemPresent } = internalCombine(item, update, index)
+        const { value: itemResult, isPresent: isItemPresent } = internalCombine(item, update, index)
         if (isItemPresent) {
           result.push(itemResult)
         }
@@ -390,7 +390,7 @@ describe("combineObjects", () => {
         for (const [key, subUpdate] of Object.entries(update)) {
           if (updatableKeys.includes(key)) {
             const currentValue = this[key]
-            const { result: newValue, isPresent } = internalCombine(currentValue, subUpdate, key, true)
+            const { value: newValue, isPresent } = internalCombine(currentValue, subUpdate, key, true)
             if (!isPresent) {
               throw new Error('CustomMerge does not support deleting key: ' + key)
             }

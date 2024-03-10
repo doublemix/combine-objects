@@ -112,7 +112,7 @@ function internalCombineForTransformers(source, update, key = undefined, isPrese
   const result = internalCombine(source, update, key, isPresent)
   const isResultPresent = !isRemove(result)
   return {
-    result: isResultPresent ? result : undefined,
+    value: isResultPresent ? result : undefined,
     isPresent: isResultPresent,
   }
 }
