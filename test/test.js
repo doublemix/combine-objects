@@ -1,20 +1,25 @@
 import { expect } from "chai";
 
 import combine from "../src/index";
-import { __isWarningDisplayed, __resetWarnings, __setTestMode } from "../src/warnings";
+import {
+  __isWarningDisplayed,
+  __resetWarnings,
+  __setTestMode,
+} from "../src/warnings";
 
-const { opaque, replace, remove, ignore, chain, update, updateCreator } = combine;
+const { opaque, replace, remove, ignore, chain, update, updateCreator } =
+  combine;
 
 describe("combineObjects", () => {
   before(() => {
-    __setTestMode(true)
-  })
+    __setTestMode(true);
+  });
   after(() => {
-    __setTestMode(false)
-  })
+    __setTestMode(false);
+  });
   beforeEach(() => {
-    __resetWarnings()
-  })
+    __resetWarnings();
+  });
 
   it("should replace scalars with scalars", () => {
     expect(combine(4, 5)).to.eql(5);
@@ -97,7 +102,9 @@ describe("combineObjects", () => {
     expect(combine({ x: 5, y: 6 }, { x: remove() })).to.deep.eql({ y: 6 });
   });
   it("should throw when removing at the top-level", () => {
-    expect(() => combine({}, remove())).to.throw("Cannot return remove() from combine()");
+    expect(() => combine({}, remove())).to.throw(
+      "Cannot return remove() from combine()"
+    );
   });
   it("should support multiple updates through chain", () => {
     const obj = combine({ x: 4, y: 5, z: 8 }, chain({ x: 6 }, { y: 7 }));
@@ -215,11 +222,11 @@ describe("combineObjects", () => {
     expect(combine(obj, transform)).to.equal(obj);
   });
   it("should not create a property when the update is ignore()", () => {
-    expect(combine({}, { x: ignore() })).to.not.haveOwnProperty("x")
-  })
+    expect(combine({}, { x: ignore() })).to.not.haveOwnProperty("x");
+  });
   it("should throw if not enough arguments are passed", () => {
-    expect(() => combine()).to.throw()
-    expect(() => combine({})).to.throw()
+    expect(() => combine()).to.throw();
+    expect(() => combine({})).to.throw();
   });
   // TODO could probably use more test with functions, the relation to everything else is intricate
   it("should return source when passed a chain of no updates", () => {
@@ -228,39 +235,76 @@ describe("combineObjects", () => {
     expect(combine(5, chain())).to.equal(5);
   });
   it("should allow multiple updates at nested levels with chain", () => {
-    expect(combine(
-      { x: { y: 5 } },
-      { x: { y: chain(it => it + 1, it => it * it) } },
-    )).to.deep.equal({ x: { y: 36 } })
-  })
+    expect(
+      combine(
+        { x: { y: 5 } },
+        {
+          x: {
+            y: chain(
+              (it) => it + 1,
+              (it) => it * it
+            ),
+          },
+        }
+      )
+    ).to.deep.equal({ x: { y: 36 } });
+  });
   it("should provide the key at each entry of the chain", () => {
-    expect(combine(
-      { x: "base" },
-      { x: chain((it, key) => "(" + it + "-" + key + ")", (it, key) => it + "--" + key) }
-    )).to.deep.equal({
-      x: "(base-x)--x"
-    })
-  })
+    expect(
+      combine(
+        { x: "base" },
+        {
+          x: chain(
+            (it, key) => "(" + it + "-" + key + ")",
+            (it, key) => it + "--" + key
+          ),
+        }
+      )
+    ).to.deep.equal({
+      x: "(base-x)--x",
+    });
+  });
   it("should allow chain to remove property", () => {
-    expect(combine({ x: 5 }, { x: chain(6, remove()) })).to.deep.equal({})
-  })
+    expect(combine({ x: 5 }, { x: chain(6, remove()) })).to.deep.equal({});
+  });
   it("should behave as though property is removed in middle of change", () => {
-    expect(combine({ x: 5 }, { x: chain(remove(), x => x === 5 ? "bad" : "good") }))
-      .to.deep.equal({ x: "good" })
-  })
+    expect(
+      combine(
+        { x: 5 },
+        { x: chain(remove(), (x) => (x === 5 ? "bad" : "good")) }
+      )
+    ).to.deep.equal({ x: "good" });
+  });
   it("should work when a remove is followed by ignore in a chain", () => {
-    expect(combine({ x: 5}, { x: chain(remove(), ignore()) })).to.not.haveOwnProperty("x")
-  })
+    expect(
+      combine({ x: 5 }, { x: chain(remove(), ignore()) })
+    ).to.not.haveOwnProperty("x");
+  });
   it("should work with nested chains", () => {
-    expect(combine({ x: 5 }, { x: chain(x => x + 1, chain(x => x + 2, x => x + 3)) }))
-      .to.deep.equal({ x: 11 })
-  })
+    expect(
+      combine(
+        { x: 5 },
+        {
+          x: chain(
+            (x) => x + 1,
+            chain(
+              (x) => x + 2,
+              (x) => x + 3
+            )
+          ),
+        }
+      )
+    ).to.deep.equal({ x: 11 });
+  });
   it("should work with remove from nested chains", () => {
-    expect(combine({ x: 5 }, { x: chain(chain(remove(), ignore()), ignore()) }))
-      .to.not.haveOwnProperty("x")
-  })
+    expect(
+      combine({ x: 5 }, { x: chain(chain(remove(), ignore()), ignore()) })
+    ).to.not.haveOwnProperty("x");
+  });
   it("should allow a transformer to access whether a value is present", () => {
-    const checkPresence = (valueIfPresent, valueIfAbsent) => (_, __, isPresent) => replace(isPresent ? valueIfPresent : valueIfAbsent)
+    const checkPresence =
+      (valueIfPresent, valueIfAbsent) => (_, __, isPresent) =>
+        replace(isPresent ? valueIfPresent : valueIfAbsent);
 
     const result = combine(
       {
@@ -270,19 +314,19 @@ describe("combineObjects", () => {
         x: checkPresence("here", "not here"),
         y: checkPresence("here", "not here"),
       }
-    )
+    );
 
     expect(result).to.deep.equal({
       x: "here",
       y: "not here",
-    })
-  })
+    });
+  });
   it("should have the correct value for isPresent during a chain", () => {
-    const checks = []
+    const checks = [];
     const checkPresence = () => (value, _, isPresent) => {
-      checks.push(isPresent ? "here" : "not here")
-      return isPresent ? value : remove()
-    }
+      checks.push(isPresent ? "here" : "not here");
+      return isPresent ? value : remove();
+    };
     combine(
       {
         x: "initial",
@@ -293,136 +337,153 @@ describe("combineObjects", () => {
           remove(),
           checkPresence(),
           "update",
-          checkPresence(),
-        )
+          checkPresence()
+        ),
       }
-    )
+    );
 
-    expect(checks).to.deep.equal(["here", "not here", "here"])
-  })
+    expect(checks).to.deep.equal(["here", "not here", "here"]);
+  });
   it("should set isPresent to true when called on the root level state", () => {
-    expect(combine(1, (_, __, isPresent) => isPresent ? "present" : "not present")).to.equal("present")
-  })
+    expect(
+      combine(1, (_, __, isPresent) => (isPresent ? "present" : "not present"))
+    ).to.equal("present");
+  });
   it("should allow transformers to call an combine as their fourth argument, and respond to remove() being returned", () => {
     const arrayMap = (update) => (it, _, __, internalCombine) => {
-      const result = []
-      let index = 0
+      const result = [];
+      let index = 0;
       for (const item of it) {
-        const { value: itemResult, isPresent: isItemPresent } = internalCombine(item, update, index)
+        const { value: itemResult, isPresent: isItemPresent } = internalCombine(
+          item,
+          update,
+          index
+        );
         if (isItemPresent) {
-          result.push(itemResult)
+          result.push(itemResult);
         }
-        index++
+        index++;
       }
-      return result
-    }
+      return result;
+    };
 
     // return items whose values are less than 10 or after the fourth item
     const result = combine(
       [5, 10, 4, 20, 3, 30],
-      arrayMap((it, index) => it < 10 || index >= 4 ? ignore() : remove())
-    )
+      arrayMap((it, index) => (it < 10 || index >= 4 ? ignore() : remove()))
+    );
 
-    expect(result).to.deep.equal([5, 4, 3, 30])
-  })
+    expect(result).to.deep.equal([5, 4, 3, 30]);
+  });
   it("should warn if a possible invalid transform use is detected", () => {
-    const increment = () => it => it + 1
+    const increment = () => (it) => it + 1;
 
-    const result = combine(1, increment)
-    expect(result).to.equal(2)
+    const result = combine(1, increment);
+    expect(result).to.equal(2);
 
-    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
-  })
+    expect(__isWarningDisplayed("possibleIncorrectUpdateCreatorUse")).to.be
+      .true;
+  });
   it("should not warn if transform update is explicitly returned", () => {
-    const doubleTransform = () => it => update(it2 => it + it2)
+    const doubleTransform = () => (it) => update((it2) => it + it2);
 
-    const result = combine(2, doubleTransform())
-    expect(result).to.equal(4)
+    const result = combine(2, doubleTransform());
+    expect(result).to.equal(4);
 
-    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.false
-  })
+    expect(__isWarningDisplayed("possibleIncorrectUpdateCreatorUse")).to.be
+      .false;
+  });
   it("should warn it same function is re-used after being marked update()", () => {
-    const incrementTransform = it => it + 1
+    const incrementTransform = (it) => it + 1;
 
-    combine({ x: 1 }, { x: () => update(incrementTransform) })
+    combine({ x: 1 }, { x: () => update(incrementTransform) });
 
-    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.false
+    expect(__isWarningDisplayed("possibleIncorrectUpdateCreatorUse")).to.be
+      .false;
 
     __resetWarnings();
 
-    combine({ x: 1 }, { x: () => incrementTransform })
+    combine({ x: 1 }, { x: () => incrementTransform });
 
-    expect(__isWarningDisplayed('possibleIncorrectUpdateCreatorUse')).to.be.true
-  })
+    expect(__isWarningDisplayed("possibleIncorrectUpdateCreatorUse")).to.be
+      .true;
+  });
   it("should throw if update() is used outside of combine", () => {
-    expect(() => update(it => it + 1)).to.throw()
-  })
+    expect(() => update((it) => it + 1)).to.throw();
+  });
   it("should throw if a update creator is used incorrectly", () => {
-    const increment = updateCreator(() => it => it + 1)
+    const increment = updateCreator(() => (it) => it + 1);
 
-    expect(() => combine(1, increment)).to.throw()
-  })
-  it('should throw if library functions are incorrectly used as transforms', () => {
-    expect(() => combine(1, replace)).to.throw()
+    expect(() => combine(1, increment)).to.throw();
+  });
+  it("should throw if library functions are incorrectly used as transforms", () => {
+    expect(() => combine(1, replace)).to.throw();
 
-    expect(() => combine(1, remove)).to.throw()
+    expect(() => combine(1, remove)).to.throw();
 
-    expect(() => combine(1, ignore)).to.throw()
+    expect(() => combine(1, ignore)).to.throw();
 
-    expect(() => combine(1, chain)).to.throw()
-  })
-  it('should allow user to define custom merge logic', () => {
+    expect(() => combine(1, chain)).to.throw();
+  });
+  it("should allow user to define custom merge logic", () => {
     class CustomMerge {
-      constructor (x, y, z) {
-        this.x = x
-        this.y = y
-        this.z = z
+      constructor(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
       }
 
-      clone () {
-        return new CustomMerge(this.x, this.y, this.z)
+      clone() {
+        return new CustomMerge(this.x, this.y, this.z);
       }
 
-      [combine.customMerge] (update, internalCombine) {
-        const updatableKeys = ['x', 'y', 'z']
-        const result = this.clone()
+      [combine.customMerge](update, internalCombine) {
+        const updatableKeys = ["x", "y", "z"];
+        const result = this.clone();
         for (const [key, subUpdate] of Object.entries(update)) {
           if (updatableKeys.includes(key)) {
-            const currentValue = this[key]
-            const { value: newValue, isPresent } = internalCombine(currentValue, subUpdate, key, true)
+            const currentValue = this[key];
+            const { value: newValue, isPresent } = internalCombine(
+              currentValue,
+              subUpdate,
+              key,
+              true
+            );
             if (!isPresent) {
-              throw new Error('CustomMerge does not support deleting key: ' + key)
+              throw new Error(
+                "CustomMerge does not support deleting key: " + key
+              );
             }
-            result[key] = newValue
+            result[key] = newValue;
           } else {
-            throw new Error('CustomMerge does not have updatable key: ' + key)
+            throw new Error("CustomMerge does not have updatable key: " + key);
           }
         }
-        return result
+        return result;
       }
     }
 
-    const state = new CustomMerge(1, 2, 3)
+    const state = new CustomMerge(1, 2, 3);
 
     const updated = combine(state, {
       x: 5,
-      y: it => it + 1,
-    })
+      y: (it) => it + 1,
+    });
 
-    expect(updated.x).to.equal(5)
-    expect(updated.y).to.equal(3)
-    expect(updated.z).to.equal(3)
-
-    expect(() => {
-      combine(state, {
-        x: remove()
-      })
-    }).to.throw('CustomMerge does not support deleting key: x')
+    expect(updated.x).to.equal(5);
+    expect(updated.y).to.equal(3);
+    expect(updated.z).to.equal(3);
 
     expect(() => {
       combine(state, {
-        a: 1
-      })
-    }).to.throw('CustomMerge does not have updatable key: a')
-  })
+        x: remove(),
+      });
+    }).to.throw("CustomMerge does not support deleting key: x");
+
+    expect(() => {
+      combine(state, {
+        a: 1,
+      });
+    }).to.throw("CustomMerge does not have updatable key: a");
+  });
 });

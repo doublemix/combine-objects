@@ -1,21 +1,24 @@
 /* eslint-disable max-classes-per-file */
 
-import isPlainObject from './is-plain-object';
+import isPlainObject from "./is-plain-object";
 
-import { multipleUpdatesDeprecationWarnings, opaqueFunctionDeprecationWarning, possibleIncorrectUpdateCreatorUseWarning } from './warnings';
+import {
+  opaqueFunctionDeprecationWarning,
+  possibleIncorrectUpdateCreatorUseWarning,
+} from "./warnings";
 
 const EMPTY = {};
 
-const hasOwnProperty = Object.prototype.hasOwnProperty
-function hasOwn (object, property) {
-  return hasOwnProperty.call(object, property)
+const hasOwnProperty = Object.prototype.hasOwnProperty;
+function hasOwn(object, property) {
+  return hasOwnProperty.call(object, property);
 }
 
 function isFunction(value) {
-  return typeof value === 'function';
+  return typeof value === "function";
 }
 function isObject(value) {
-  return ((typeof value === 'object') && value !== null) || isFunction(value);
+  return (typeof value === "object" && value !== null) || isFunction(value);
 }
 
 class Replace {
@@ -25,7 +28,7 @@ class Replace {
 }
 
 class Chain {
-  constructor (updates) {
+  constructor(updates) {
     this.updates = updates;
   }
 }
@@ -33,22 +36,22 @@ class Chain {
 const GlobalContext = {
   isInTransform: false,
   markedUpdate: null,
-}
-
-const symbols = {
-  opaque: Symbol('@@combineObjects/opaque'),
-  remove: Symbol('@@combineObjects/remove'),
-  ignore: Symbol('@@combineObjects/ignore'),
-  updateCreator: Symbol('@@combineObjects/updateCreator'),
-  customMerge: Symbol('@@combineObjects/customMerge'),
 };
 
-function updateCreator (updateCreator) {
+const symbols = {
+  opaque: Symbol("@@combineObjects/opaque"),
+  remove: Symbol("@@combineObjects/remove"),
+  ignore: Symbol("@@combineObjects/ignore"),
+  updateCreator: Symbol("@@combineObjects/updateCreator"),
+  customMerge: Symbol("@@combineObjects/customMerge"),
+};
+
+function updateCreator(updateCreator) {
   if (isFunction(updateCreator)) {
-    updateCreator[symbols.updateCreator] = true
-    return updateCreator
+    updateCreator[symbols.updateCreator] = true;
+    return updateCreator;
   }
-  throw new Error("updateCreator should only be called on functions.")
+  throw new Error("updateCreator should only be called on functions.");
 }
 
 const replace = updateCreator((value) => new Replace(value));
@@ -65,13 +68,15 @@ const opaque = (value) => {
   return value;
 };
 
-function update (updateValue) {
+function update(updateValue) {
   if (!GlobalContext.isInTransform) {
-    throw new Error("update should only be called within executing transformers.")
+    throw new Error(
+      "update should only be called within executing transformers."
+    );
   }
 
-  GlobalContext.markedUpdate = updateValue
-  return updateValue
+  GlobalContext.markedUpdate = updateValue;
+  return updateValue;
 }
 
 const isReplace = (value) => value instanceof Replace;
@@ -79,26 +84,34 @@ const isIgnore = (value) => value === symbols.ignore;
 const isOpaque = (value) => isObject(value) && !!value[symbols.opaque];
 const isChain = (value) => value instanceof Chain;
 const isRemove = (value) => value === symbols.remove;
-const isTransform = (value) => isFunction(value)
+const isTransform = (value) => isFunction(value);
 const isScalar = (value, isUpdate) => {
-  return isOpaque(value) || !isPlainObject(value) && (!isUpdate || !isTransform(value))
-}
+  return (
+    isOpaque(value) ||
+    (!isPlainObject(value) && (!isUpdate || !isTransform(value)))
+  );
+};
 
 function combineObjects(source, update) {
   const result = {};
-  const allKeys = Object.keys(source)
+  const allKeys = Object.keys(source);
   for (const key of Object.keys(update)) {
     if (!allKeys.includes(key)) {
-      allKeys.push(key)
+      allKeys.push(key);
     }
   }
   for (const key of allKeys) {
     if (hasOwn(update, key)) {
       // mutually recursive functions
       // eslint-disable-next-line no-use-before-define
-      const combineResult = internalCombine(source[key], update[key], key, hasOwn(source, key));
+      const combineResult = internalCombine(
+        source[key],
+        update[key],
+        key,
+        hasOwn(source, key)
+      );
       if (!isRemove(combineResult)) {
-        result[key] = combineResult
+        result[key] = combineResult;
       }
     } else {
       result[key] = source[key];
@@ -108,61 +121,78 @@ function combineObjects(source, update) {
   return result;
 }
 
-function internalCombineForTransformers(source, update, key = undefined, isPresent = true) {
-  const result = internalCombine(source, update, key, isPresent)
-  const isResultPresent = !isRemove(result)
+function internalCombineForTransformers(
+  source,
+  update,
+  key = undefined,
+  isPresent = true
+) {
+  const result = internalCombine(source, update, key, isPresent);
+  const isResultPresent = !isRemove(result);
   return {
     value: isResultPresent ? result : undefined,
     isPresent: isResultPresent,
-  }
+  };
 }
 
 function internalCombine(source, update, key = undefined, isPresent = true) {
   if (isChain(update)) {
-    let result = source
-    let resultIsPresent = isPresent
+    let result = source;
+    let resultIsPresent = isPresent;
     for (const individualUpdate of update.updates) {
-      const intermediateResult = internalCombine(result, individualUpdate, key, resultIsPresent)
+      const intermediateResult = internalCombine(
+        result,
+        individualUpdate,
+        key,
+        resultIsPresent
+      );
       if (isRemove(intermediateResult)) {
-        result = undefined
-        resultIsPresent = false
+        result = undefined;
+        resultIsPresent = false;
       } else {
-        result = intermediateResult
-        resultIsPresent = true
+        result = intermediateResult;
+        resultIsPresent = true;
       }
     }
-    
+
     if (!resultIsPresent) {
-      return remove()
+      return remove();
     }
-    return result
+    return result;
   }
 
   if (isTransform(update)) {
     if (update[symbols.updateCreator]) {
-      throw new Error("Update creator cannot be called as transformer, creators should be called during update creation")
+      throw new Error(
+        "Update creator cannot be called as transformer, creators should be called during update creation"
+      );
     }
 
     let computedUpdate;
-    const prevIsInTransform = GlobalContext.isInTransform
-    GlobalContext.isInTransform = true
-    const prevMarkedUpdate = GlobalContext.markedUpdate
-    let markedUpdate
+    const prevIsInTransform = GlobalContext.isInTransform;
+    GlobalContext.isInTransform = true;
+    const prevMarkedUpdate = GlobalContext.markedUpdate;
+    let markedUpdate;
     try {
-      computedUpdate = update(source, key, isPresent, internalCombineForTransformers);
+      computedUpdate = update(
+        source,
+        key,
+        isPresent,
+        internalCombineForTransformers
+      );
     } finally {
-      GlobalContext.isInTransform = prevIsInTransform
-      markedUpdate = GlobalContext.markedUpdate
-      GlobalContext.markedUpdate = prevMarkedUpdate
+      GlobalContext.isInTransform = prevIsInTransform;
+      markedUpdate = GlobalContext.markedUpdate;
+      GlobalContext.markedUpdate = prevMarkedUpdate;
     }
 
     if (isTransform(computedUpdate)) {
       if (markedUpdate !== computedUpdate) {
-        possibleIncorrectUpdateCreatorUseWarning()
+        possibleIncorrectUpdateCreatorUseWarning();
       }
     }
 
-    return internalCombine(source, computedUpdate, key, isPresent)
+    return internalCombine(source, computedUpdate, key, isPresent);
   }
 
   if (isReplace(update)) {
@@ -171,21 +201,21 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
 
   if (isIgnore(update)) {
     if (isPresent === false) {
-      return remove()
+      return remove();
     } else {
       return source;
     }
   }
 
   if (isScalar(update, true)) {
-    return update
+    return update;
   }
 
   if (isObject(source) && isFunction(source[symbols.customMerge])) {
-    return source[symbols.customMerge](update, internalCombineForTransformers)
+    return source[symbols.customMerge](update, internalCombineForTransformers);
   }
 
-  let mergeSource = source
+  let mergeSource = source;
   if (!isPresent || isScalar(source, false)) {
     mergeSource = EMPTY; // allows nested function transforms to happen
   }
@@ -195,11 +225,11 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
 
 function combine(source, update) {
   if (arguments.length < 2) {
-    throw new Error("Not enough arguments")
+    throw new Error("Not enough arguments");
   }
   const result = internalCombine(source, update);
   if (isRemove(result)) {
-    throw new Error("Cannot return remove() from combine()")
+    throw new Error("Cannot return remove() from combine()");
   }
   return result;
 }
