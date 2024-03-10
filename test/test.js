@@ -372,4 +372,58 @@ describe("combineObjects", () => {
 
     expect(() => combine(1, chain)).to.throw()
   })
+  it('should allow user to define custom merge logic', () => {
+    class CustomMerge {
+      constructor (x, y, z) {
+        this.x = x
+        this.y = y
+        this.z = z
+      }
+
+      clone () {
+        return new CustomMerge(this.x, this.y, this.z)
+      }
+
+      [combine.customMerge] (update, internalCombine) {
+        const updatableKeys = ['x', 'y', 'z']
+        const result = this.clone()
+        for (const [key, subUpdate] of Object.entries(update)) {
+          if (updatableKeys.includes(key)) {
+            const currentValue = this[key]
+            const { result: newValue, isPresent } = internalCombine(currentValue, subUpdate, key, true)
+            if (!isPresent) {
+              throw new Error('CustomMerge does not support deleting key: ' + key)
+            }
+            result[key] = newValue
+          } else {
+            throw new Error('CustomMerge does not have updatable key: ' + key)
+          }
+        }
+        return result
+      }
+    }
+
+    const state = new CustomMerge(1, 2, 3)
+
+    const updated = combine(state, {
+      x: 5,
+      y: it => it + 1,
+    })
+
+    expect(updated.x).to.equal(5)
+    expect(updated.y).to.equal(3)
+    expect(updated.z).to.equal(3)
+
+    expect(() => {
+      combine(state, {
+        x: remove()
+      })
+    }).to.throw('CustomMerge does not support deleting key: x')
+
+    expect(() => {
+      combine(state, {
+        a: 1
+      })
+    }).to.throw('CustomMerge does not have updatable key: a')
+  })
 });

@@ -40,6 +40,7 @@ const symbols = {
   remove: Symbol('@@combineObjects/remove'),
   ignore: Symbol('@@combineObjects/ignore'),
   updateCreator: Symbol('@@combineObjects/updateCreator'),
+  customMerge: Symbol('@@combineObjects/customMerge'),
 };
 
 function updateCreator (updateCreator) {
@@ -180,6 +181,10 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     return update
   }
 
+  if (isObject(source) && isFunction(source[symbols.customMerge])) {
+    return source[symbols.customMerge](update, internalCombineForTransformers)
+  }
+
   let mergeSource = source
   if (!isPresent || isScalar(source, false)) {
     mergeSource = EMPTY; // allows nested function transforms to happen
@@ -210,5 +215,6 @@ combine.isOpaque = isOpaque;
 combine.chain = chain;
 combine.update = update;
 combine.updateCreator = updateCreator;
+combine.customMerge = symbols.customMerge;
 
 export default combine;
