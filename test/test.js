@@ -96,8 +96,8 @@ describe("combineObjects", () => {
   it("should be able to remove props", () => {
     expect(combine({ x: 5, y: 6 }, { x: remove() })).to.deep.eql({ y: 6 });
   });
-  it("should return undefined when removing at the top-level", () => {
-    expect(combine({}, remove())).to.eql(undefined);
+  it("should throw when removing at the top-level", () => {
+    expect(() => combine({}, remove())).to.throw("Cannot return remove() from combine()");
   });
   it("should support multiple updates through chain", () => {
     const obj = combine({ x: 4, y: 5, z: 8 }, chain({ x: 6 }, { y: 7 }));

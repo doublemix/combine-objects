@@ -195,7 +195,10 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
 
 function internalCombineHelper(source, update) {
   const result = internalCombine(source, update);
-  return result === symbols.remove ? undefined : result;
+  if (isRemove(result)) {
+    throw new Error("Cannot return remove() from combine()")
+  }
+  return result;
 }
 
 function combine(source, ...updates) {
