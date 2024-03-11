@@ -1,0 +1,88 @@
+# This document describes the semantics of the library in a pseudo-code, with a more expressive type system
+
+type Optional = enum(T):
+    present(value: T)
+    absent()
+
+type Key = string
+
+type ValueEntry = struct:
+    key: Key
+    value: Value
+
+type Value = enum:
+    mergable(entries: ValueEntry[])
+    scalar(value: any)
+
+type Transformer = typed fn (source: Source, key: Optional(Key)) => Update;
+
+type UpdateEntry = struct:
+    key: Key
+    update: Update
+
+type Update = enum:
+    mergable(entries: UpdateEntry[])
+    scalar(value: any)
+    transform(transformer: Transformer)
+    replace(withValue: Value)
+    remove()
+    ignore()
+    chain(updates: Update[])
+
+type Source = enum:
+    present(value: Value)
+    absent()
+
+let internalApply = fn (source: Source, update: Update, key: Optional(Key)) => Source:
+    switch (source, update):
+        
+        (let source, transform(Transformer(let transform))):
+            internalApply(source, transform(source, update, key), key)
+        
+        (_, replace(let withValue)):
+            present(withValue)
+        
+        (_, remove()):
+            absent()
+        
+        (let source, ignore()):
+            source
+        
+        (let source, chain(let updates)):
+            reduce(source, updates, (source, update) => internalApply(source, update, key))
+            
+        (_, scalar(let newValue)):
+            present(scalar(newValue))
+        
+        (present(mergable(let sourceValueEntries)), mergable(let updateEntries)):
+            present(mergable(merge(sourceValueEntries, updateEntries)))
+        
+        (_, let update as mergable(_)):
+            internalApply(present(mergable([])), update)
+
+let merge = fn (sourceValueEntries: ValueEntry[], updateEntries: UpdateEntry[]) => ValueEntry[]:
+    let result = new ValueEntry[]
+
+    let allKeys = new orderedSet:
+        entry.key for entry in sourceValueEntries
+        entry.key for entry in updateEntries
+    
+    for key in allKeys:
+        let sourceEntry = switch find(sourceValueEntries, entry => entry.key):
+            found(let entry): present(entry.value)
+            notFound(): absent()
+        
+        let update = switch find(updateEntries, entry => entry.key):
+            found(let entry): entry.update
+            notFound(): ignore()
+        
+        let resultEntry = internalApply(sourceEntry, update, present(key))
+
+        result.append(resultEntry)
+    
+    result
+
+let apply = fn (value: Value, update: Update) => Value
+    switch internalApply(present(value), update, absent()):
+        present(let result): result
+        absent: throw
