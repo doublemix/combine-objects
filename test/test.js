@@ -486,4 +486,50 @@ describe("combineObjects", () => {
       });
     }).to.throw("CustomMerge does not have updatable key: a");
   });
+  it("ensure non-enumerable own properties are copied over and preserve enumerability", () => {
+    const state = { a: 1 };
+    Object.defineProperty(state, "b", {
+      configurable: true,
+      enumerable: false,
+      value: 5,
+    });
+
+    const nextState = combine(state, {});
+
+    // at present mergable updates imply a new object, we could more aggressively prevent creation of new object, if nothing changes
+    expect(nextState).to.not.equal(state);
+    expect(nextState.a).to.equal(state.a);
+    expect(Object.getOwnPropertyDescriptor(nextState, "a").enumerable).to.equal(
+      Object.getOwnPropertyDescriptor(state, "a").enumerable
+    );
+    expect(nextState).to.haveOwnProperty("b");
+    expect(nextState.b).to.equal(state.b);
+    expect(Object.getOwnPropertyDescriptor(nextState, "b").enumerable).to.equal(
+      Object.getOwnPropertyDescriptor(state, "b").enumerable
+    );
+  });
+  it("should ensure symbol properties are copied over", () => {
+    const state = { a: 1 };
+    const sym = Symbol.for("sym");
+    Object.defineProperty(state, sym, {
+      configurable: true,
+      enumerable: true,
+      value: 5,
+    });
+
+    const nextState = combine(state, {});
+
+    expect(nextState).to.not.equal(state);
+    expect(nextState.a).to.equal(state.a);
+    expect(nextState).to.haveOwnProperty(sym);
+    expect(nextState[sym]).to.equal(state[sym]);
+  });
+  it("should not apply non-enumerable keys in updates", () => {
+    const state = { a: 1 };
+    const update = {};
+    Object.defineProperty(update, "a", { enumerable: false, value: 2 });
+    const nextState = combine(state, update);
+
+    expect(nextState.a).to.equal(state.a);
+  });
 });
