@@ -93,68 +93,37 @@ const isScalar = (value, isUpdate) => {
 };
 
 function combineObjects(source, update) {
-  const processedKeys = new Set();
+  const result = { ...source };
 
-  const sourcePropertyDescriptors = Object.getOwnPropertyDescriptors(source);
-  const updatePropertyDescriptors = Object.getOwnPropertyDescriptors(update);
+  const possibleUpdateKeys = Object.keys(update).concat(
+    Object.getOwnPropertySymbols(update)
+  );
 
-  const result = {};
-
-  processKeys(Object.getOwnPropertyNames(source));
-  processKeys(Object.getOwnPropertySymbols(source));
-  processKeys(Object.getOwnPropertyNames(update));
-  processKeys(Object.getOwnPropertySymbols(update));
-
-  return result;
-
-  function processKeys(keys) {
-    for (const key of keys) {
-      if (processedKeys.has(key)) continue;
-      processedKeys.add(key);
-
-      const sourcePropertyDescriptor = sourcePropertyDescriptors[key];
-      const updatePropertyDescriptor = updatePropertyDescriptors[key];
-
-      const sourceIsPresent = sourcePropertyDescriptor !== undefined;
-      const sourceValue = sourceIsPresent ? source[key] : undefined;
-
-      const updateIsPresent =
-        updatePropertyDescriptor !== undefined &&
-        updatePropertyDescriptor.enumerable;
-
-      let resultValue;
-      let resultIsPresent = true;
-      if (updateIsPresent) {
-        const updateValue = update[key];
-
-        resultValue = internalCombine(
-          sourceValue,
-          updateValue,
-          key,
-          sourceIsPresent
-        );
-
-        if (isRemove(resultValue)) {
-          resultIsPresent = false;
-        }
-      } else {
-        resultValue = sourceValue;
-      }
-
-      if (resultIsPresent) {
-        Object.defineProperty(result, key, {
-          configurable: true,
-          enumerable: sourceIsPresent
-            ? sourcePropertyDescriptor.enumerable
-            : true,
-          value: resultValue,
-          // we don't copy writable over, because this may not even be a value property
-          // for computed properties we could derive writable by presence of a setter
-          writable: true,
-        });
+  for (const key of possibleUpdateKeys) {
+    if (typeof key === "symbol") {
+      const descriptor = Object.getOwnPropertyDescriptor(update, key);
+      if (!(descriptor.enumerable ?? false)) {
+        continue;
       }
     }
+    const updateForKey = update[key];
+    const isPresent = hasOwn(result, key);
+    const updatedEntry = internalCombine(
+      isPresent ? result[key] : undefined,
+      updateForKey,
+      key,
+      isPresent
+    );
+    if (isRemove(updatedEntry)) {
+      if (isPresent) {
+        delete result[key];
+      }
+    } else {
+      result[key] = updatedEntry;
+    }
   }
+
+  return result;
 }
 
 function internalCombineForTransformers(

@@ -486,7 +486,7 @@ describe("combineObjects", () => {
       });
     }).to.throw("CustomMerge does not have updatable key: a");
   });
-  it("ensure non-enumerable own properties are copied over and preserve enumerability", () => {
+  it("should not copy non-enumerable state keys", () => {
     const state = { a: 1 };
     Object.defineProperty(state, "b", {
       configurable: true,
@@ -498,15 +498,27 @@ describe("combineObjects", () => {
 
     // at present mergable updates imply a new object, we could more aggressively prevent creation of new object, if nothing changes
     expect(nextState).to.not.equal(state);
-    expect(nextState.a).to.equal(state.a);
-    expect(Object.getOwnPropertyDescriptor(nextState, "a").enumerable).to.equal(
-      Object.getOwnPropertyDescriptor(state, "a").enumerable
-    );
+    expect(nextState).to.haveOwnProperty("a");
+    expect(nextState).to.not.haveOwnProperty("b");
+  });
+  it("should not allow access to previous value of non-enumerable property in transforms", () => {
+    const state = {};
+    Object.defineProperty(state, "b", {
+      configurable: true,
+      enumerable: false,
+      value: 6,
+    });
+
+    let isBPresent;
+    const nextState = combine(state, {
+      b: (it, _, isPresent) => (
+        (isBPresent = isPresent), it === 6 ? "fail" : "pass"
+      ),
+    });
+
+    expect(isBPresent).to.be.false;
     expect(nextState).to.haveOwnProperty("b");
-    expect(nextState.b).to.equal(state.b);
-    expect(Object.getOwnPropertyDescriptor(nextState, "b").enumerable).to.equal(
-      Object.getOwnPropertyDescriptor(state, "b").enumerable
-    );
+    expect(nextState.b).to.equal("pass");
   });
   it("should ensure symbol properties are copied over", () => {
     const state = { a: 1 };
@@ -524,12 +536,29 @@ describe("combineObjects", () => {
     expect(nextState).to.haveOwnProperty(sym);
     expect(nextState[sym]).to.equal(state[sym]);
   });
+  it("should allow updating symbol properties", () => {
+    const sym = Symbol.for("sym");
+    const state1 = { [sym]: 1 };
+    const update1 = { [sym]: 2 };
+
+    const state2 = combine(state1, update1);
+
+    expect(state2[sym]).to.equal(2);
+
+    const update2 = { [sym]: (it) => it + 1 };
+    const state3 = combine(state2, update2);
+
+    expect(state3[sym]).to.equal(3);
+  });
   it("should not apply non-enumerable keys in updates", () => {
-    const state = { a: 1 };
+    const sym = Symbol.for("sym");
+    const state = { a: 1, [sym]: 3 };
     const update = {};
     Object.defineProperty(update, "a", { enumerable: false, value: 2 });
+    Object.defineProperty(update, sym, { enumerable: false, value: 4 });
     const nextState = combine(state, update);
 
     expect(nextState.a).to.equal(state.a);
+    expect(nextState[sym]).to.equal(state[sym]);
   });
 });
