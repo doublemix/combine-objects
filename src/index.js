@@ -33,6 +33,12 @@ class Chain {
   }
 }
 
+class KeyedUpdate {
+  constructor(updates) {
+    this.updates = updates;
+  }
+}
+
 const GlobalContext = {
   isInTransform: false,
   markedUpdate: null,
@@ -58,6 +64,9 @@ const replace = updateCreator((value) => new Replace(value));
 const chain = updateCreator((...updates) => new Chain(updates));
 const remove = updateCreator(() => symbols.remove);
 const ignore = updateCreator(() => symbols.ignore);
+const keyedUpdate = (...updates) => {
+  return new KeyedUpdate(updates);
+};
 
 const removeSentinel = Symbol("@@combineObjects/removeSentinel");
 
@@ -88,11 +97,16 @@ const isChain = (value) => value instanceof Chain;
 const isRemove = (value) => value === symbols.remove;
 const isRemoveSentinel = (value) => value === removeSentinel;
 const isTransform = (value) => isFunction(value);
-const isScalar = (value, isUpdate) => {
-  return (
-    isOpaque(value) ||
-    (!isPlainObject(value) && (!isUpdate || !isTransform(value)))
-  );
+const isScalarSource = (value) => {
+  return isOpaque(value) || !isPlainObject(value);
+};
+const isKeyedUpdate = (value) =>
+  (isPlainObject(value) && !isOpaque(value)) || value instanceof KeyedUpdate;
+const getUpdateEntries = (value) => {
+  if (value instanceof KeyedUpdate) {
+    return value.updates;
+  }
+  return Object.entries(value);
 };
 
 function combineObjects(source, update) {
@@ -219,20 +233,23 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     return removeSentinel;
   }
 
-  if (isScalar(update, true)) {
-    return update;
+  if (isKeyedUpdate(update)) {
+    if (isObject(source) && isFunction(source[symbols.customMerge])) {
+      return source[symbols.customMerge](
+        getUpdateEntries(update),
+        internalCombineForTransformers
+      );
+    }
+
+    let mergeSource = source;
+    if (!isPresent || isScalarSource(source)) {
+      mergeSource = EMPTY; // allows nested function transforms to happen
+    }
+
+    return combineObjects(mergeSource, update);
   }
 
-  if (isObject(source) && isFunction(source[symbols.customMerge])) {
-    return source[symbols.customMerge](update, internalCombineForTransformers);
-  }
-
-  let mergeSource = source;
-  if (!isPresent || isScalar(source, false)) {
-    mergeSource = EMPTY; // allows nested function transforms to happen
-  }
-
-  return combineObjects(mergeSource, update);
+  return update;
 }
 
 function combine(source, update) {
@@ -255,5 +272,6 @@ combine.chain = chain;
 combine.update = update;
 combine.updateCreator = updateCreator;
 combine.customMerge = symbols.customMerge;
+combine.keyedUpdate = keyedUpdate;
 
 export default combine;

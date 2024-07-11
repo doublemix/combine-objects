@@ -475,10 +475,10 @@ describe("combineObjects", () => {
         return new CustomMerge(this.x, this.y, this.z);
       }
 
-      [combine.customMerge](update, internalCombine) {
+      [combine.customMerge](updates, internalCombine) {
         const updatableKeys = ["x", "y", "z"];
         const result = this.clone();
-        for (const [key, subUpdate] of Object.entries(update)) {
+        for (const [key, subUpdate] of updates) {
           if (updatableKeys.includes(key)) {
             const currentValue = this[key];
             const { value: newValue, isPresent } = internalCombine(
@@ -523,6 +523,36 @@ describe("combineObjects", () => {
         a: 1,
       });
     }).to.throw("CustomMerge does not have updatable key: a");
+  });
+  it("should allow custom keyed update", () => {
+    class CustomMap extends Map {
+      [combine.customMerge](updates, internalCombine) {
+        let newMap = new CustomMap(this);
+        for (const [key, update] of updates) {
+          const { value, isPresent } = internalCombine(
+            newMap.get(key),
+            update,
+            key,
+            newMap.has(key)
+          );
+          if (isPresent) newMap.set(key, value);
+          else newMap.delete(key);
+        }
+        return newMap;
+      }
+    }
+
+    const myKey = {};
+
+    const state = {
+      map: new CustomMap([[myKey, 5]]),
+    };
+
+    const newState = combine(state, {
+      map: combine.keyedUpdate([myKey, (it) => it + 1]),
+    });
+
+    expect(newState.map.get(myKey)).to.equal(6);
   });
   it("should not copy non-enumerable state keys", () => {
     const state = { a: 1 };
