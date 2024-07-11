@@ -59,6 +59,8 @@ const chain = updateCreator((...updates) => new Chain(updates));
 const remove = updateCreator(() => symbols.remove);
 const ignore = updateCreator(() => symbols.ignore);
 
+const removeSentinel = Symbol("@@combineObjects/removeSentinel");
+
 const opaque = (value) => {
   if (!isPlainObject(value)) {
     opaqueFunctionDeprecationWarning();
@@ -84,6 +86,7 @@ const isIgnore = (value) => value === symbols.ignore;
 const isOpaque = (value) => isObject(value) && !!value[symbols.opaque];
 const isChain = (value) => value instanceof Chain;
 const isRemove = (value) => value === symbols.remove;
+const isRemoveSentinel = (value) => value === removeSentinel;
 const isTransform = (value) => isFunction(value);
 const isScalar = (value, isUpdate) => {
   return (
@@ -114,7 +117,7 @@ function combineObjects(source, update) {
       key,
       isPresent
     );
-    if (isRemove(updatedEntry)) {
+    if (isRemoveSentinel(updatedEntry)) {
       if (isPresent) {
         delete result[key];
       }
@@ -133,7 +136,7 @@ function internalCombineForTransformers(
   isPresent = true
 ) {
   const result = internalCombine(source, update, key, isPresent);
-  const isResultPresent = !isRemove(result);
+  const isResultPresent = !isRemoveSentinel(result);
   return {
     value: isResultPresent ? result : undefined,
     isPresent: isResultPresent,
@@ -151,7 +154,7 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
         key,
         resultIsPresent
       );
-      if (isRemove(intermediateResult)) {
+      if (isRemoveSentinel(intermediateResult)) {
         result = undefined;
         resultIsPresent = false;
       } else {
@@ -161,7 +164,7 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
     }
 
     if (!resultIsPresent) {
-      return remove();
+      return removeSentinel;
     }
     return result;
   }
@@ -206,10 +209,14 @@ function internalCombine(source, update, key = undefined, isPresent = true) {
 
   if (isIgnore(update)) {
     if (isPresent === false) {
-      return remove();
+      return removeSentinel;
     } else {
       return source;
     }
+  }
+
+  if (isRemove(update)) {
+    return removeSentinel;
   }
 
   if (isScalar(update, true)) {
@@ -233,7 +240,7 @@ function combine(source, update) {
     throw new Error("Not enough arguments");
   }
   const result = internalCombine(source, update);
-  if (isRemove(result)) {
+  if (isRemoveSentinel(result)) {
     throw new Error("Cannot return remove() from combine()");
   }
   return result;

@@ -79,6 +79,17 @@ describe("combineObjects", () => {
   it("should replace opaque objects passed through replace(...)", () => {
     expect(combine({ x: 8 }, replace(opaque({ x: 9 })))).to.deep.eql({ x: 9 });
   });
+  it("should replace (not execute) commands passed to replace(...)", () => {
+    expect(combine({ x: 8 }, { x: replace(remove()) })).to.deep.eql({
+      x: remove(),
+    });
+    expect(combine({ x: 8 }, { x: replace(ignore()) })).to.deep.eql({
+      x: ignore(),
+    });
+    expect(combine({ x: 8 }, { x: replace(replace(5)) }).x).to.be.instanceOf(
+      replace(5).constructor
+    );
+  });
   it("should replace (not merge) opaque objects", () => {
     // doing multiple combines to show that opaque sticks with the object
     const obj1 = { x: 5 };
