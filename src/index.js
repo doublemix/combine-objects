@@ -105,7 +105,7 @@ function combineObjects(source, update) {
   for (const key of possibleUpdateKeys) {
     if (typeof key === "symbol") {
       const descriptor = Object.getOwnPropertyDescriptor(update, key);
-      if (!(descriptor.enumerable ?? false)) {
+      if (!descriptor.enumerable) {
         continue;
       }
     }

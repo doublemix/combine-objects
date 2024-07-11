@@ -235,6 +235,17 @@ describe("combineObjects", () => {
   it("should not create a property when the update is ignore()", () => {
     expect(combine({}, { x: ignore() })).to.not.haveOwnProperty("x");
   });
+  it("should return (not execute) commands in the source, when the update is ignore()", () => {
+    expect(combine({ x: remove() }, { x: ignore() })).to.deep.eql({
+      x: remove(),
+    });
+    expect(combine({ x: ignore() }, { x: ignore() })).to.deep.eql({
+      x: ignore(),
+    });
+    expect(combine({ x: replace(5) }, { x: ignore() }).x).to.be.instanceOf(
+      replace(5).constructor
+    );
+  });
   it("should throw if not enough arguments are passed", () => {
     expect(() => combine()).to.throw();
     expect(() => combine({})).to.throw();
@@ -360,7 +371,7 @@ describe("combineObjects", () => {
       combine(1, (_, __, isPresent) => (isPresent ? "present" : "not present"))
     ).to.equal("present");
   });
-  it("should allow transformers to call an combine as their fourth argument, and respond to remove() being returned", () => {
+  it("should allow transformers to receive internal combine as their fourth argument, and respond to remove() being returned", () => {
     const arrayMap = (update) => (it, _, __, internalCombine) => {
       const result = [];
       let index = 0;
@@ -385,6 +396,17 @@ describe("combineObjects", () => {
     );
 
     expect(result).to.deep.equal([5, 4, 3, 30]);
+  });
+  it("should call internal combine with key=undefined, isPresent=true, when not provided", () => {
+    expect(
+      combine(
+        1,
+        (value, _, __, internalCombine) =>
+          internalCombine(value, (value, key, isPresent) => {
+            return [value, key, isPresent];
+          }).value
+      )
+    ).to.deep.equal([1, undefined, true]);
   });
   it("should warn if a possible invalid transform use is detected", () => {
     const increment = () => (it) => it + 1;
@@ -426,6 +448,11 @@ describe("combineObjects", () => {
     const increment = updateCreator(() => (it) => it + 1);
 
     expect(() => combine(1, increment)).to.throw();
+  });
+  it("should throw if update creator is not a function", () => {
+    expect(() => {
+      updateCreator(1);
+    }).to.throw();
   });
   it("should throw if library functions are incorrectly used as transforms", () => {
     expect(() => combine(1, replace)).to.throw();
