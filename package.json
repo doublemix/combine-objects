@@ -1,20 +1,22 @@
 {
   "name": "@doublemx2/combine-objects",
-  "version": "0.4.2",
+  "version": "0.12.0",
   "description": "Small library for combining objects",
   "files": [
     "/dist/**"
   ],
   "main": "dist/index.js",
+  "browser": "dist/umd/combine.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/doublemix/combine-objects.git"
+    "url": "git+https://github.com/doublemix/combine-objects.git"
   },
   "scripts": {
     "lint": "eslint ./src",
-    "build:babel": "rm -rf ./dist && babel ./src -d ./dist",
-    "build:rollup": "rm -rf ./dist && rollup -c rollup.config.js",
+    "build:babel": "rimraf ./dist && babel ./src -d ./dist",
+    "build:rollup": "rimraf ./dist && rollup -c rollup.config.mjs",
     "build": "npm run build:rollup",
+    "prepublishOnly": "npm run build",
     "test": "mocha",
     "cover": "nyc mocha"
   },
@@ -30,19 +32,12 @@
     "chai": "^4.1.2",
     "coveralls": "^3.0.0",
     "eslint": "^6.2.2",
-    "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.18.2",
-    "istanbul": "^1.1.0-alpha.1",
     "jsonfile": "^4.0.0",
     "mocha": "^5.1.0",
-    "nyc": "^14.1.1",
-    "rollup": "^0.59.2",
-    "rollup-plugin-babel": "^4.0.1",
-    "rollup-plugin-commonjs": "^9.1.3",
-    "rollup-plugin-node-resolve": "^3.3.0"
-  },
-  "dependencies": {
-    "is-plain-object": "^2.0.4"
+    "nyc": "^15.1.0",
+    "rimraf": "^5.0.5",
+    "rollup": "^4.12.0"
   },
   "nyc": {
     "reporter": [
